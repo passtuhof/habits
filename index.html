@@ -125,6 +125,15 @@ button {
   text-overflow: ellipsis;
 }
 
+#habitColor {
+  font-weight: 700;
+}
+
+#habitColor option[value="black"] { color: #111111; }
+#habitColor option[value="red"] { color: #ff3b30; }
+#habitColor option[value="green"] { color: #34c759; }
+#habitColor option[value="blue"] { color: #007aff; }
+
 .right-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -289,12 +298,12 @@ option[value="blue"] { color: #007aff; }
     <textarea id="habitDescription" placeholder="Описание привычки" oninput="autoResize(this)"></textarea>
 
     <div class="label">Категория</div>
-    <select id="habitColor">
-      <option value="black">Черный</option>
-      <option value="red">Красный</option>
-      <option value="green">Зеленый</option>
-      <option value="blue">Синий</option>
-    </select>
+   <select id="habitColor" onchange="colorSelect(this)">
+  <option value="black" style="color:#111111;">Черная</option>
+  <option value="red" style="color:#ff3b30;">Красная</option>
+  <option value="green" style="color:#34c759;">Зеленая</option>
+  <option value="blue" style="color:#007aff;">Синяя</option>
+</select>
 
     <div class="buttons">
       <button onclick="saveHabit()">Сохранить</button>
@@ -321,10 +330,10 @@ option[value="blue"] { color: #007aff; }
 let habits = JSON.parse(localStorage.getItem("habits")) || [];
 
 let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
-  red: "Красный",
-  green: "Зеленый",
-  blue: "Синий",
-  black: "Черный"
+  red: "Категория",
+  green: "Категория",
+  blue: "Категория",
+  black: "Категория"
 };
 
 let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["red", "green", "blue", "black"];
@@ -392,6 +401,17 @@ function getDates() {
   }
 
   return { result, todayIndex };
+}
+
+function colorSelect(select) {
+  const colors = {
+    black: "#111111",
+    red: "#ff3b30",
+    green: "#34c759",
+    blue: "#007aff"
+  };
+
+  select.style.color = colors[select.value] || "#111111";
 }
 
 function render() {
@@ -615,6 +635,8 @@ function openModal() {
   document.getElementById("habitDescription").value = "";
   document.getElementById("habitDescription").style.height = "74px";
   document.getElementById("habitColor").value = "black";
+  
+  colorSelect(document.getElementById("habitColor"));
   document.getElementById("deleteButton").style.display = "none";
 
   document.getElementById("modal").style.display = "flex";
@@ -629,6 +651,8 @@ function editHabit(index) {
   document.getElementById("habitTitle").value = habits[index].title;
   document.getElementById("habitDescription").value = habits[index].description || "";
   document.getElementById("habitColor").value = habits[index].color || "black";
+  
+  colorSelect(document.getElementById("habitColor"));
   document.getElementById("deleteButton").style.display = "block";
 
   document.getElementById("modal").style.display = "flex";
