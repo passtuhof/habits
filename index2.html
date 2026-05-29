@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Привычки</title>
+
+<style>
+:root {
+  --left-width: 25vw;
+  --day-width: 35px;
+  --row-height: 44px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  margin: 0;
+  background: #fff;
+  color: #111;
+}
+
+.app {
+  padding: 14px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+button {
+  border: none;
+  background: #111;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.tracker {
+  display: grid;
+  grid-template-columns: var(--left-width) 1fr;
+  gap: 8px;
+}
+
+.corner {
+  height: 38px;
+  margin-bottom: 6px;
+}
+
+.category-left,
+.category-right {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.category-left {
+  cursor: pointer;
+}
+
+.category-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.habit-left {
+  height: var(--row-height);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+.habit-left.dragging {
+  transform: scale(1.035);
+  background: rgba(0,0,0,0.05);
+  border-radius: 10px;
+  opacity: 0.8;
+}
+
+.name-wrap {
+  min-width: 0;
+  flex: 1;
+  touch-action: none;
+}
+
+.habit-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.right-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 10px;
+}
+
+.right-inner {
+  min-width: max-content;
+}
+
+.dates-row {
+  display: grid;
+  grid-template-columns: repeat(var(--days-count), var(--day-width));
+  gap: 3px;
+  height: 38px;
+  margin-bottom: 6px;
+}
+
+.day {
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.1;
+  color: #666;
+}
+
+.today {
+  color: #111;
+  font-weight: 800;
+}
+
+.check-row {
+  display: grid;
+  grid-template-columns: repeat(var(--days-count), var(--day-width));
+  gap: 3px;
+  height: var(--row-height);
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.category-spacer {
+  height: 34px;
+  border-bottom: 1px solid #eee;
+}
+
+.cell {
+  width: 23px;
+  height: 23px;
+  border: 1.5px solid var(--habit-color);
+  border-radius: 7px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--habit-color);
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0 auto;
+}
+
+.cell.done::after {
+  content: "✓";
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 20;
+}
+
+.modal-content {
+  background: white;
+  padding: 18px;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 360px;
+}
+
+input, textarea, select {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+}
+
+textarea {
+  min-height: 74px;
+  resize: none;
+  overflow: hidden;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.buttons button {
+  flex: 1;
+  padding: 10px 8px;
+}
+
+.cancel {
+  background: #ddd;
+  color: #111;
+}
+
+.delete-in-modal {
+  background: #eee;
+  color: #111;
+}
+
+@media (max-width: 390px) {
+  :root {
+    --left-width: 25vw;
+    --day-width: 35px;
+  }
+
+  .habit-name {
+    font-size: 13px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="top">
+    <h1>Привычки</h1>
+    <button onclick="openModal()">+</button>
+  </div>
+
+  <div class="tracker">
+    <div class="left-column">
+      <div class="corner"></div>
+      <div id="leftList"></div>
+    </div>
+
+    <div class="right-scroll" id="rightScroll">
+      <div class="right-inner">
+        <div class="dates-row" id="datesRow"></div>
+        <div id="checksList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <h2 id="modalTitle">Новая привычка</h2>
+
+    <input id="habitTitle" placeholder="Название привычки">
+    <textarea id="habitDescription" placeholder="Описание привычки" oninput="autoResize(this)"></textarea>
+
+    <select id="habitColor">
+      <option value="black">Черный</option>
+      <option value="red">Красный</option>
+      <option value="green">Зеленый</option>
+      <option value="blue">Синий</option>
+    </select>
+
+    <div class="buttons">
+      <button onclick="saveHabit()">Сохранить</button>
+      <button class="cancel" onclick="closeModal()">Отмена</button>
+      <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="categoryModal">
+  <div class="modal-content">
+    <h2>Название категории</h2>
+
+    <input id="categoryTitleInput" placeholder="Название категории">
+
+    <div class="buttons">
+      <button onclick="saveCategoryName()">Сохранить</button>
+      <button class="cancel" onclick="closeCategoryModal()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let habits = JSON.parse(localStorage.getItem("habits")) || [];
+let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
+  red: "Красный",
+  green: "Зеленый",
+  blue: "Синий",
+  black: "Черный"
+};
+
+let editingIndex = null;
+let editingCategory = null;
+let dragIndex = null;
+let dragColor = null;
+let startY = 0;
+
+const colorOrder = ["red", "green", "blue", "black"];
+
+const colorMap = {
+  black: "#111111",
+  red: "#ff3b30",
+  green: "#34c759",
+  blue: "#007aff"
+};
+
+function save() {
+  localStorage.setItem("habits", JSON.stringify(habits));
+  localStorage.setItem("categoryNames", JSON.stringify(categoryNames));
+}
+
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getDates() {
+  const days = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+  const result = [];
+
+  const today = new Date();
+  const startPast = new Date(2026, 4, 1);
+  const futureDays = 30;
+
+  for (let d = new Date(startPast); d < today; d.setDate(d.getDate() + 1)) {
+    result.push(makeDateObject(new Date(d), false));
+  }
+
+  const todayIndex = result.length;
+
+  for (let i = 0; i <= futureDays; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    result.push(makeDateObject(date, i === 0));
+  }
+
+  function makeDateObject(date, isToday) {
+    const dayName = days[date.getDay()];
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+
+    return {
+      label: `${dayName}<br>${dd}.${mm}`,
+      key: toDateKey(date),
+      isToday
+    };
+  }
+
+  return { result, todayIndex };
+}
+
+function render() {
+  const { result: dates, todayIndex } = getDates();
+
+  document.documentElement.style.setProperty("--days-count", dates.length);
+
+  const datesRow = document.getElementById("datesRow");
+  const leftList = document.getElementById("leftList");
+  const checksList = document.getElementById("checksList");
+
+  datesRow.innerHTML = "";
+  leftList.innerHTML = "";
+  checksList.innerHTML = "";
+
+  dates.forEach(date => {
+    datesRow.innerHTML += `
+      <div class="day ${date.isToday ? "today" : ""}">
+        ${date.label}
+      </div>
+    `;
+  });
+
+  colorOrder.forEach(colorKey => {
+    const color = colorMap[colorKey];
+
+    leftList.innerHTML += `
+      <div class="category-left" style="color:${color}" onclick="openCategoryModal('${colorKey}')">
+        <div class="category-title">${categoryNames[colorKey]} ✎</div>
+      </div>
+    `;
+
+    checksList.innerHTML += `<div class="category-spacer"></div>`;
+
+    habits.forEach((habit, habitIndex) => {
+      if (habit.color !== colorKey) return;
+
+      leftList.innerHTML += `
+        <div class="habit-left" data-index="${habitIndex}">
+          <div class="name-wrap"
+            onclick="editHabit(${habitIndex})"
+            ontouchstart="startDrag(event, ${habitIndex})"
+            ontouchmove="moveDrag(event)"
+            ontouchend="endDrag(event)">
+            <div class="habit-name" style="color:${color}">
+              ${habit.title}
+            </div>
+          </div>
+        </div>
+      `;
+
+      let row = `<div class="check-row" style="--habit-color:${color}">`;
+
+      dates.forEach(date => {
+        const done = habit.done && habit.done[date.key];
+
+        row += `
+          <div class="cell ${done ? "done" : ""}"
+            onclick="toggleHabit(${habitIndex}, '${date.key}')">
+          </div>
+        `;
+      });
+
+      row += `</div>`;
+      checksList.innerHTML += row;
+    });
+  });
+
+  setTimeout(() => {
+    const scroll = document.getElementById("rightScroll");
+
+    if (!window.initialScrollDone) {
+      const dayWidth = parseInt(
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--day-width")
+      );
+
+      scroll.scrollLeft = todayIndex * (dayWidth + 3);
+      window.initialScrollDone = true;
+    }
+  }, 0);
+}
+
+function startDrag(event, index) {
+  dragIndex = index;
+  dragColor = habits[index].color;
+  startY = event.touches[0].clientY;
+
+  const row = document.querySelector(`[data-index="${index}"]`);
+  if (row) row.classList.add("dragging");
+}
+
+function moveDrag(event) {
+  event.preventDefault();
+
+  if (dragIndex === null) return;
+
+  const currentY = event.touches[0].clientY;
+  const diff = currentY - startY;
+
+  if (diff > 42) {
+    moveWithinCategory(1);
+    startY = currentY;
+  }
+
+  if (diff < -42) {
+    moveWithinCategory(-1);
+    startY = currentY;
+  }
+}
+
+function moveWithinCategory(direction) {
+  const sameColorIndexes = habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => item.habit.color === dragColor)
+    .map(item => item.index);
+
+  const currentPosition = sameColorIndexes.indexOf(dragIndex);
+  const targetPosition = currentPosition + direction;
+
+  if (targetPosition < 0 || targetPosition >= sameColorIndexes.length) return;
+
+  const targetIndex = sameColorIndexes[targetPosition];
+
+  const temp = habits[dragIndex];
+  habits[dragIndex] = habits[targetIndex];
+  habits[targetIndex] = temp;
+
+  dragIndex = targetIndex;
+
+  save();
+  render();
+
+  const row = document.querySelector(`[data-index="${dragIndex}"]`);
+  if (row) row.classList.add("dragging");
+}
+
+function endDrag() {
+  dragIndex = null;
+  dragColor = null;
+
+  document.querySelectorAll(".habit-left").forEach(row => {
+    row.classList.remove("dragging");
+  });
+}
+
+function toggleHabit(habitIndex, dateKey) {
+  if (!habits[habitIndex].done) {
+    habits[habitIndex].done = {};
+  }
+
+  habits[habitIndex].done[dateKey] = !habits[habitIndex].done[dateKey];
+
+  save();
+  render();
+}
+
+function openModal() {
+  editingIndex = null;
+
+  document.getElementById("modalTitle").textContent = "Новая привычка";
+  document.getElementById("habitTitle").value = "";
+  document.getElementById("habitDescription").value = "";
+  document.getElementById("habitColor").value = "black";
+  document.getElementById("deleteButton").style.display = "none";
+
+  document.getElementById("modal").style.display = "flex";
+}
+
+function editHabit(index) {
+  if (dragIndex !== null) return;
+
+  editingIndex = index;
+
+  document.getElementById("modalTitle").textContent = "Редактировать привычку";
+  document.getElementById("habitTitle").value = habits[index].title;
+  document.getElementById("habitDescription").value = habits[index].description || "";
+  autoResize(document.getElementById("habitDescription"));
+  document.getElementById("habitColor").value = habits[index].color || "black";
+  document.getElementById("deleteButton").style.display = "block";
+
+  document.getElementById("modal").style.display = "flex";
+}
+
+function saveHabit() {
+  const title = document.getElementById("habitTitle").value.trim();
+  const description = document.getElementById("habitDescription").value.trim();
+  const color = document.getElementById("habitColor").value;
+
+  if (!title) return;
+
+  if (editingIndex !== null) {
+    habits[editingIndex].title = title;
+    habits[editingIndex].description = description;
+    habits[editingIndex].color = color;
+  } else {
+    habits.push({
+      id: Date.now(),
+      title,
+      description,
+      color,
+      done: {}
+    });
+  }
+
+  save();
+  closeModal();
+  render();
+}
+
+function deleteCurrentHabit() {
+  if (editingIndex === null) return;
+
+  if (confirm("Удалить привычку?")) {
+    habits.splice(editingIndex, 1);
+    save();
+    closeModal();
+    render();
+  }
+}
+
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+  editingIndex = null;
+}
+
+function openCategoryModal(colorKey) {
+  editingCategory = colorKey;
+  document.getElementById("categoryTitleInput").value = categoryNames[colorKey];
+  document.getElementById("categoryModal").style.display = "flex";
+}
+
+function saveCategoryName() {
+  const value = document.getElementById("categoryTitleInput").value.trim();
+  if (!value || !editingCategory) return;
+
+  categoryNames[editingCategory] = value;
+
+  save();
+  closeCategoryModal();
+  render();
+}
+
+function closeCategoryModal() {
+  document.getElementById("categoryModal").style.display = "none";
+  editingCategory = null;
+}
+
+function autoResize(textarea) {
+  textarea.style.height = "auto";
+  textarea.style.height = textarea.scrollHeight + "px";
+}
+
+render();
+</script>
+
+</body>
+</html>
