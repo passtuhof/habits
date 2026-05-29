@@ -298,8 +298,8 @@ option[value="blue"] { color: #007aff; }
     <textarea id="habitDescription" placeholder="Описание привычки" oninput="autoResize(this)"></textarea>
 
     <div class="label">Категория</div>
-   <select id="habitColor" onchange="colorSelect(this)">
-  <option value="black" style="color:#111111;">Черная</option>
+<select id="habitColor" onchange="colorSelect(this)">
+  <option value="black" style="color:#111111;">Нет</option>
   <option value="red" style="color:#ff3b30;">Красная</option>
   <option value="green" style="color:#34c759;">Зеленая</option>
   <option value="blue" style="color:#007aff;">Синяя</option>
@@ -330,13 +330,15 @@ option[value="blue"] { color: #007aff; }
 let habits = JSON.parse(localStorage.getItem("habits")) || [];
 
 let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
+  black: "",
   red: "Категория",
   green: "Категория",
-  blue: "Категория",
-  black: "Категория"
+  blue: "Категория"
 };
 
-let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["red", "green", "blue", "black"];
+let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black", "red", "green", "blue"];
+
+
 let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")) || {};
 
 let editingIndex = null;
@@ -438,21 +440,25 @@ function render() {
   categoryOrder.forEach((colorKey, categoryIndex) => {
     const color = colorMap[colorKey];
     const isCollapsed = collapsedCategories[colorKey];
+    const categoryHabits = habits.filter(habit => habit.color === colorKey);
+  if (categoryHabits.length === 0) return;
 
-    leftList.innerHTML += `
-      <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
-        onclick="openCategoryModal('${colorKey}')"
-        ontouchstart="startCategoryDrag(event, ${categoryIndex})"
-        ontouchmove="moveCategoryDrag(event)"
-        ontouchend="endCategoryDrag(event)">
-        <div class="category-title">${categoryNames[colorKey]}</div>
-        <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
-          ${isCollapsed ? "▲" : "▼"}
-        </div>
+    if (colorKey !== "black") {
+  leftList.innerHTML += `
+    <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
+      onclick="openCategoryModal('${colorKey}')"
+      ontouchstart="startCategoryDrag(event, ${categoryIndex})"
+      ontouchmove="moveCategoryDrag(event)"
+      ontouchend="endCategoryDrag(event)">
+      <div class="category-title">${categoryNames[colorKey]}</div>
+      <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
+        ${isCollapsed ? "▲" : "▼"}
       </div>
-    `;
+    </div>
+  `;
 
-    checksList.innerHTML += `<div class="category-spacer"></div>`;
+  checksList.innerHTML += `<div class="category-spacer"></div>`;
+}
 
     if (isCollapsed) return;
 
