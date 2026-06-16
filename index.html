@@ -125,19 +125,6 @@ button {
   text-overflow: ellipsis;
 }
 
-#habitColor {
-  font-weight: 700;
-}
-
-#habitColor option {
-  font-weight: 700;
-}
-
-#habitColor option[value="black"] { color: #111111; }
-#habitColor option[value="red"] { color: #ff3b30; }
-#habitColor option[value="green"] { color: #34c759; }
-#habitColor option[value="blue"] { color: #007aff; }
-
 .right-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -257,10 +244,18 @@ textarea {
   color: #111;
 }
 
-option[value="black"] { color: #111; }
-option[value="red"] { color: #ff3b30; }
-option[value="green"] { color: #34c759; }
-option[value="blue"] { color: #007aff; }
+#habitColor {
+  font-weight: 700;
+}
+
+#habitColor option {
+  font-weight: 700;
+}
+
+#habitColor option[value="black"] { color: #111111; }
+#habitColor option[value="red"] { color: #ff3b30; }
+#habitColor option[value="green"] { color: #34c759; }
+#habitColor option[value="blue"] { color: #007aff; }
 
 @media (max-width: 390px) {
   :root {
@@ -302,12 +297,12 @@ option[value="blue"] { color: #007aff; }
     <textarea id="habitDescription" placeholder="Описание привычки" oninput="autoResize(this)"></textarea>
 
     <div class="label">Категория</div>
-<select id="habitColor" onchange="colorSelect(this)">
-  <option value="black" style="color:#111111;">Нет</option>
-  <option value="red" style="color:#ff3b30;">Красная</option>
-  <option value="green" style="color:#34c759;">Зеленая</option>
-  <option value="blue" style="color:#007aff;">Синяя</option>
-</select>
+    <select id="habitColor" onchange="colorSelect(this)">
+      <option value="black" style="color:#111111;font-weight:700;">Нет</option>
+      <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
+      <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
+      <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
+    </select>
 
     <div class="buttons">
       <button onclick="saveHabit()">Сохранить</button>
@@ -341,8 +336,6 @@ let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
 };
 
 let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black", "red", "green", "blue"];
-
-
 let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")) || {};
 
 let editingIndex = null;
@@ -379,6 +372,8 @@ function getDates() {
   const result = [];
 
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const startPast = new Date(2026, 4, 1);
   const futureDays = 30;
 
@@ -409,17 +404,6 @@ function getDates() {
   return { result, todayIndex };
 }
 
-function colorSelect(select) {
-  const colors = {
-    black: "#111111",
-    red: "#ff3b30",
-    green: "#34c759",
-    blue: "#007aff"
-  };
-
-  select.style.color = colors[select.value] || "#111111";
-}
-
 function render() {
   const { result: dates, todayIndex } = getDates();
 
@@ -442,27 +426,28 @@ function render() {
   });
 
   categoryOrder.forEach((colorKey, categoryIndex) => {
+    const categoryHabits = habits.filter(habit => habit.color === colorKey);
+    if (categoryHabits.length === 0) return;
+
     const color = colorMap[colorKey];
     const isCollapsed = collapsedCategories[colorKey];
-    const categoryHabits = habits.filter(habit => habit.color === colorKey);
-  if (categoryHabits.length === 0) return;
 
     if (colorKey !== "black") {
-  leftList.innerHTML += `
-    <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
-      onclick="openCategoryModal('${colorKey}')"
-      ontouchstart="startCategoryDrag(event, ${categoryIndex})"
-      ontouchmove="moveCategoryDrag(event)"
-      ontouchend="endCategoryDrag(event)">
-      <div class="category-title">${categoryNames[colorKey]}</div>
-      <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
-        ${isCollapsed ? "▲" : "▼"}
-      </div>
-    </div>
-  `;
+      leftList.innerHTML += `
+        <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
+          onclick="openCategoryModal('${colorKey}')"
+          ontouchstart="startCategoryDrag(event, ${categoryIndex})"
+          ontouchmove="moveCategoryDrag(event)"
+          ontouchend="endCategoryDrag(event)">
+          <div class="category-title">${categoryNames[colorKey]}</div>
+          <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
+            ${isCollapsed ? "▲" : "▼"}
+          </div>
+        </div>
+      `;
 
-  checksList.innerHTML += `<div class="category-spacer"></div>`;
-}
+      checksList.innerHTML += `<div class="category-spacer"></div>`;
+    }
 
     if (isCollapsed) return;
 
@@ -645,7 +630,6 @@ function openModal() {
   document.getElementById("habitDescription").value = "";
   document.getElementById("habitDescription").style.height = "74px";
   document.getElementById("habitColor").value = "black";
-  
   colorSelect(document.getElementById("habitColor"));
   document.getElementById("deleteButton").style.display = "none";
 
@@ -661,7 +645,6 @@ function editHabit(index) {
   document.getElementById("habitTitle").value = habits[index].title;
   document.getElementById("habitDescription").value = habits[index].description || "";
   document.getElementById("habitColor").value = habits[index].color || "black";
-  
   colorSelect(document.getElementById("habitColor"));
   document.getElementById("deleteButton").style.display = "block";
 
@@ -741,6 +724,17 @@ function closeCategoryModal() {
 function autoResize(textarea) {
   textarea.style.height = "auto";
   textarea.style.height = textarea.scrollHeight + "px";
+}
+
+function colorSelect(select) {
+  const colors = {
+    black: "#111111",
+    red: "#ff3b30",
+    green: "#34c759",
+    blue: "#007aff"
+  };
+
+  select.style.color = colors[select.value] || "#111111";
 }
 
 render();
