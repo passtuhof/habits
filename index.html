@@ -592,6 +592,40 @@ border-radius:50%;
   color: #fff;
 }
 
+
+.picker-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.picker-item{
+  width:100%;
+  background:#f3f3f3;
+  color:#111;
+  text-align:left;
+  padding:12px;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:400;
+}
+
+.picker-item.add{
+  background:#111;
+  color:#fff;
+}
+
+.picker-field{
+  cursor:pointer;
+}
+
+.confirm-text{
+  font-size:16px;
+  font-weight:700;
+  margin:8px 0 16px;
+  line-height:1.25;
+}
+
 </style>
 </head>
 <body>
@@ -629,6 +663,35 @@ border-radius:50%;
 </div>
 
 
+
+<div class="modal" id="categoryPickerModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close-btn" onclick="closeCategoryPicker()">×</button>
+    <h2>Выбор категории</h2>
+    <div class="picker-list" id="categoryPickerList"></div>
+  </div>
+</div>
+
+<div class="modal" id="colorPickerModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close-btn" onclick="closeColorPicker()">×</button>
+    <h2>Выбор цвета</h2>
+    <div class="picker-list" id="colorPickerList"></div>
+  </div>
+</div>
+
+<div class="modal" id="deleteHabitConfirmModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close-btn" onclick="closeDeleteHabitConfirm()">×</button>
+    <h2>Удалить привычку?</h2>
+    <div class="confirm-text">Вы точно хотите удалить эту привычку?</div>
+    <div class="buttons">
+      <button type="button" class="delete-in-modal" onclick="confirmDeleteCurrentHabit()">Удалить</button>
+      <button type="button" onclick="closeDeleteHabitConfirm()">Оставить</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="settingsModal">
   <div class="modal-content">
     <button type="button" class="modal-close-btn" onclick="closeSettingsModal()">×</button>
@@ -665,10 +728,8 @@ border-radius:50%;
 
     <div id="goodFields">
       <div class="label">Категория</div>
-      <select id="habitColor" onchange="handleCategorySelect(this)">
-        <option value="black">Нет</option>
-        <option value="add_category">➕ Добавить</option>
-      </select>
+      <input id="habitColorDisplay" class="picker-field" readonly onclick="openCategoryPicker()" value="Нет">
+      <input id="habitColor" type="hidden" value="black">
     </div>
 
     <div id="badFields" style="display:none;">
@@ -708,12 +769,8 @@ border-radius:50%;
     <div class="label">Название</div>
     <input id="newCategoryName" placeholder="Название категории">
     <div class="label">Цвет</div>
-    <select id="newCategoryColor">
-      <option value="red">Красный</option>
-      <option value="green">Зеленый</option>
-      <option value="blue">Синий</option>
-      <option value="black">Черный</option>
-    </select>
+    <input id="newCategoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('newCategoryColor')" value="Красный">
+    <input id="newCategoryColor" type="hidden" value="red">
     <div class="buttons">
       <button onclick="saveNewCategory()">Сохранить</button>
     </div>
@@ -729,13 +786,8 @@ border-radius:50%;
     <input id="categoryTitleInput" placeholder="Название">
 
     <div class="label">Цвет</div>
-    <select id="categoryColor" onchange="colorSelect(this)">
-      <option value="black" style="color:#111111;">Чёрный</option>
-      <option value="red" style="color:#ff3b30;">Красный</option>
-      <option value="blue" style="color:#007aff;">Синий</option>
-      <option value="green" style="color:#34c759;">Зелёный</option>
-      <option value="yellow" style="color:#ffcc00;">Жёлтый</option>
-    </select>
+    <input id="categoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('categoryColor')" value="Чёрный">
+    <input id="categoryColor" type="hidden" value="black">
 
     <div class="buttons">
       <button onclick="saveCategoryName()">Сохранить</button>
@@ -803,6 +855,153 @@ function hideModal(id) {
   if (modal) modal.classList.remove("open");
 }
 
+
+
+const pickerColors = {
+  black: { name: "Чёрный", value: "#111111" },
+  red: { name: "Красный", value: "#ff3b30" },
+  blue: { name: "Синий", value: "#007aff" },
+  green: { name: "Зелёный", value: "#34c759" },
+  yellow: { name: "Жёлтый", value: "#ffcc00" }
+};
+
+let activeColorTarget = null;
+
+function getColorName(colorKey) {
+  return pickerColors[colorKey]?.name || "Чёрный";
+}
+
+function getColorValue(colorKey) {
+  return pickerColors[colorKey]?.value || "#111111";
+}
+
+function setCategoryValue(value) {
+  const hidden = document.getElementById("habitColor");
+  const display = document.getElementById("habitColorDisplay");
+  if (!hidden || !display) return;
+
+  hidden.value = value;
+
+  if (value === "black") {
+    display.value = "Нет";
+    display.style.color = "#111111";
+    return;
+  }
+
+  const cat = customCategories.find(c => c.id === value);
+  if (cat) {
+    display.value = cat.name;
+    display.style.color = getColorValue(cat.color);
+  } else {
+    display.value = categoryNames[value] || "Категория";
+    display.style.color = getColorValue(value);
+  }
+}
+
+function openCategoryPicker() {
+  const list = document.getElementById("categoryPickerList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  const noneBtn = document.createElement("button");
+  noneBtn.type = "button";
+  noneBtn.className = "picker-item";
+  noneBtn.textContent = "Нет";
+  noneBtn.onclick = () => {
+    setCategoryValue("black");
+    closeCategoryPicker();
+  };
+  list.appendChild(noneBtn);
+
+  customCategories.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "picker-item";
+    btn.textContent = cat.name;
+    btn.style.color = getColorValue(cat.color);
+    btn.onclick = () => {
+      setCategoryValue(cat.id);
+      closeCategoryPicker();
+    };
+    list.appendChild(btn);
+  });
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "picker-item add";
+  addBtn.textContent = "➕ Добавить";
+  addBtn.onclick = () => {
+    closeCategoryPicker();
+    openNewCategoryModal();
+  };
+  list.appendChild(addBtn);
+
+  showModal("categoryPickerModal");
+}
+
+function closeCategoryPicker() {
+  hideModal("categoryPickerModal");
+}
+
+function setColorValue(targetId, colorKey) {
+  const hidden = document.getElementById(targetId);
+  const display = document.getElementById(targetId + "Display");
+  if (!hidden || !display) return;
+
+  hidden.value = colorKey;
+  display.value = getColorName(colorKey);
+  display.style.color = getColorValue(colorKey);
+}
+
+function openColorPicker(targetId) {
+  activeColorTarget = targetId;
+  const list = document.getElementById("colorPickerList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  const colors = targetId === "newCategoryColor"
+    ? ["red", "green", "blue", "black"]
+    : ["black", "red", "blue", "green", "yellow"];
+
+  colors.forEach(colorKey => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "picker-item";
+    btn.textContent = getColorName(colorKey);
+    btn.style.color = getColorValue(colorKey);
+    btn.onclick = () => {
+      setColorValue(activeColorTarget, colorKey);
+      closeColorPicker();
+    };
+    list.appendChild(btn);
+  });
+
+  showModal("colorPickerModal");
+}
+
+function closeColorPicker() {
+  hideModal("colorPickerModal");
+  activeColorTarget = null;
+}
+
+function openDeleteHabitConfirm() {
+  showModal("deleteHabitConfirmModal");
+}
+
+function closeDeleteHabitConfirm() {
+  hideModal("deleteHabitConfirmModal");
+}
+
+function confirmDeleteCurrentHabit() {
+  if (editingIndex === null) return;
+  habits.splice(editingIndex, 1);
+  save();
+  closeDeleteHabitConfirm();
+  closeModal();
+  render();
+}
 
 function openSettingsModal() {
   updateSettingsUI();
@@ -1280,8 +1479,7 @@ function openModal() {
   document.getElementById("habitDescription").value = "";
   document.getElementById("habitDescription").style.height = "74px";
   updateDescriptionCounter();
-  document.getElementById("habitColor").value = "black";
-  colorSelect(document.getElementById("habitColor"));
+  setCategoryValue("black");
   setQuitDateValue(todayKey());
   setViolationsValue(0);
   updateViolationsVisibility();
@@ -1303,8 +1501,7 @@ function editHabit(index) {
   document.getElementById("habitTitle").value = habits[index].title;
   document.getElementById("habitDescription").value = habits[index].description || "";
   updateDescriptionCounter();
-  document.getElementById("habitColor").value = habits[index].color || "black";
-  colorSelect(document.getElementById("habitColor"));
+  setCategoryValue(habits[index].color || "black");
   setQuitDateValue(habits[index].quitDate || todayKey());
   setViolationsValue(habits[index].violations || 0);
   updateViolationsVisibility();
@@ -1374,13 +1571,7 @@ function saveHabit() {
 
 function deleteCurrentHabit() {
   if (editingIndex === null) return;
-
-  if (confirm("Удалить привычку?")) {
-    habits.splice(editingIndex, 1);
-    save();
-    closeModal();
-    render();
-  }
+  openDeleteHabitConfirm();
 }
 
 function closeModal() {
@@ -1399,11 +1590,7 @@ function openCategoryModal(colorKey) {
   document.getElementById("categoryTitleInput").value =
     customCategory ? customCategory.name : (categoryNames[colorKey] || "Категория");
 
-  const categoryColor = document.getElementById("categoryColor");
-  if (categoryColor) {
-    categoryColor.value = customCategory ? (customCategory.color || "black") : colorKey;
-    colorSelect(categoryColor);
-  }
+  setColorValue("categoryColor", customCategory ? (customCategory.color || "black") : colorKey);
 
   showModal("categoryModal");
 }
@@ -1598,21 +1785,11 @@ let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [
 function refreshCategorySelect(){
  const s=document.getElementById('habitColor');
  if(!s) return;
- const cur=s.value;
- s.innerHTML='<option value="black">Нет</option>';
- customCategories.forEach(c=>{
-   const o=document.createElement('option');
-   o.value=c.id;o.textContent=c.name;o.style.color=c.color;
-   s.appendChild(o);
- });
- const a=document.createElement('option');
- a.value='add_category';a.textContent='➕ Добавить';
- s.appendChild(a);
- if(cur && cur!=='add_category') s.value=cur;
+ setCategoryValue(s.value || "black");
 }
 
 function handleCategorySelect(sel){
- if(sel.value==='add_category'){openNewCategoryModal(); sel.value='black';}
+ // Больше не используется: список категорий теперь модальный.
 }
 
 function openNewCategoryModal(){
@@ -1629,10 +1806,12 @@ function saveNewCategory(){
  customCategories.push(cat);
  localStorage.setItem('customCategories',JSON.stringify(customCategories));
  refreshCategorySelect();
- document.getElementById('habitColor').value=cat.id;
+ setCategoryValue(cat.id);
  closeNewCategoryModal();
 }
 refreshCategorySelect();
+setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "red");
+setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
 
 render();
