@@ -75,7 +75,7 @@ button {
 }
 
 .corner {
-  height: 38px;
+  height: 34px;
   margin-bottom: 0;
 }
 
@@ -164,7 +164,7 @@ button {
 }
 
 .dates-row {
-  height: 38px;
+  height: 34px;
   margin-bottom: 0;
 }
 
@@ -327,29 +327,14 @@ textarea {
 .quit-date-wrap { position: relative; }
 #quitDateDisplay {
   cursor: pointer;
-  padding-right: 38px;
-}
-
-.quit-date-wrap::after {
-  content: "";
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-35%);
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 6px solid #777;
-  pointer-events: none;
 }
 
 .quit-calendar {
-  display: none;
+  display: block;
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -46%) scale(0.96);
   width: min(320px, calc(100vw - 48px));
   z-index: 60;
   background: #fff;
@@ -357,6 +342,17 @@ textarea {
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+.quit-calendar.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .calendar-head {
@@ -752,7 +748,10 @@ function render() {
           ontouchstart="startBadDrag(event, ${badPosition})"
           ontouchmove="moveBadDrag(event)"
           ontouchend="endBadDrag(event)">${habit.title}</div>
-        <div class="bad-status">Вы отказались ${count} ${dayWord(count)} назад</div>
+        <div class="bad-status">
+          <div>Вы отказались ${count} ${dayWord(count)} назад</div>
+          <div>Вы нарушили 0 раз</div>
+        </div>
       </div>
     `;
   });
@@ -1145,13 +1144,13 @@ function updateRefusalInfo() {
 
 function toggleQuitCalendar() {
   const calendar = document.getElementById("quitCalendar");
-  calendar.style.display = calendar.style.display === "block" ? "none" : "block";
+  calendar.classList.toggle("open");
   renderQuitCalendar();
 }
 
 function hideQuitCalendar() {
   const calendar = document.getElementById("quitCalendar");
-  if (calendar) calendar.style.display = "none";
+  if (calendar) calendar.classList.remove("open");
 }
 
 function changeCalendarMonth(delta) {
