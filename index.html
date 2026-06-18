@@ -91,7 +91,7 @@ button {
   gap: 4px;
   border-bottom: 1px solid #eee;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
   touch-action: none;
 }
 
@@ -245,14 +245,25 @@ button {
 }
 
 .modal {
-  display: none;
+  display: flex;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0);
   align-items: center;
   justify-content: center;
   padding: 16px;
   z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.24s ease, background 0.24s ease, visibility 0.24s ease;
+}
+
+.modal.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  background: rgba(0,0,0,0.35);
 }
 
 .modal-content {
@@ -263,6 +274,12 @@ button {
   max-width: 360px;
   max-height: calc(100vh - 32px);
   overflow-y: auto;
+  transform: translateY(10px) scale(0.97);
+  transition: transform 0.24s ease;
+}
+
+.modal.open .modal-content {
+  transform: translateY(0) scale(1);
 }
 
 .type-switch {
@@ -462,11 +479,10 @@ textarea {
   padding: 10px 8px;
 }
 
-.cancel { background: #ddd; color: #111; }
 .delete-in-modal { background: #eee; color: #111; }
 
-#habitColor { font-weight: 700; }
-#habitColor option { font-weight: 700; }
+#habitColor { font-weight: 400; }
+#habitColor option { font-weight: 400; }
 #habitColor option[value="black"] { color: #111111; }
 #habitColor option[value="red"] { color: #ff3b30; }
 #habitColor option[value="green"] { color: #34c759; }
@@ -479,21 +495,49 @@ textarea {
   }
 }
 
-.modal-close{
-  position:absolute;
-  top:12px;
-  right:12px;
-  width:32px;
-  height:32px;
-  border:none;
-  background:transparent;
-  color:#777;
-  font-size:24px;
-  line-height:1;
-  padding:0;
+#categoryColor {
+  font-weight: 400;
 }
-.modal-content{
-  position:relative;
+#categoryColor option[value="red"] { color: #ff3b30; }
+#categoryColor option[value="green"] { color: #34c759; }
+#categoryColor option[value="blue"] { color: #007aff; }
+#categoryColor option[value="yellow"] { color: #ffcc00; }
+#categoryColor option[value="black"] { color: #111111; }
+
+
+.calendar-modal-content {
+  max-width: 360px;
+  width: 100%;
+}
+
+.calendar-modal-content #quitCalendar {
+  width: 100%;
+}
+
+
+.modal-content {
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #777;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 400;
+  border-radius: 50%;
+}
+
+.modal-close:active {
+  background: #eee;
+  color: #111;
 }
 
 </style>
@@ -531,7 +575,7 @@ textarea {
 
 <div class="modal" id="modal">
   <div class="modal-content">
-    <button class="modal-close" onclick="closeModal()">×</button>
+    <button type="button" class="modal-close" onclick="closeModal()">×</button>
     <h2 id="modalTitle">Новая привычка</h2>
 
     <div class="type-switch">
@@ -548,11 +592,9 @@ textarea {
 
     <div id="goodFields">
       <div class="label">Категория</div>
-      <select id="habitColor" onchange="colorSelect(this)">
-        <option value="black" style="color:#111111;font-weight:700;">Нет</option>
-        <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
-        <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
-        <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
+      <select id="habitColor" onchange="handleCategorySelect(this)">
+        <option value="black">Нет</option>
+        <option value="add_category">➕ Добавить</option>
       </select>
     </div>
 
@@ -561,7 +603,6 @@ textarea {
       <div class="quit-date-wrap">
         <input id="quitDateDisplay" readonly onclick="toggleQuitCalendar()">
         <input id="quitDate" type="hidden">
-        <div id="quitCalendar" class="quit-calendar"></div>
       </div>
       <div class="refusal-info" id="refusalInfo"></div>
       <div class="violations-row" id="violationsRow">
@@ -579,12 +620,64 @@ textarea {
   </div>
 </div>
 
+<div class="modal" id="quitCalendarModal">
+  <div class="modal-content calendar-modal-content">
+    <button type="button" class="modal-close" onclick="hideQuitCalendar()">×</button>
+    <div id="quitCalendar"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="newCategoryModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close" onclick="closeNewCategoryModal()">×</button>
+    <h2>Новая категория</h2>
+    <div class="label">Название</div>
+    <input id="newCategoryName" placeholder="Название категории">
+    <div class="label">Цвет</div>
+    <select id="newCategoryColor">
+      <option value="red">Красный</option>
+      <option value="green">Зеленый</option>
+      <option value="blue">Синий</option>
+      <option value="black">Черный</option>
+    </select>
+    <div class="buttons">
+      <button onclick="saveNewCategory()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="categoryModal">
   <div class="modal-content">
-    <h2>Название категории</h2>
-    <input id="categoryTitleInput" placeholder="Название категории">
+    <button type="button" class="modal-close" onclick="closeCategoryModal()">×</button>
+    <h2 style='font-size:22px;white-space:nowrap;text-align:left;'>Редактировать категорию</h2>
+
+    <div class="label">Название</div>
+    <input id="categoryTitleInput" placeholder="Название">
+
+    <div class="label">Цвет</div>
+    <select id="categoryColor" onchange="colorSelect(this)">
+      <option value="black" style="color:#111111;">Чёрный</option>
+      <option value="red" style="color:#ff3b30;">Красный</option>
+      <option value="blue" style="color:#007aff;">Синий</option>
+      <option value="green" style="color:#34c759;">Зелёный</option>
+      <option value="yellow" style="color:#ffcc00;">Жёлтый</option>
+    </select>
+
     <div class="buttons">
       <button onclick="saveCategoryName()">Сохранить</button>
+      <button class="delete-in-modal" onclick="openCategoryDeleteChoice()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="categoryDeleteChoiceModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close" onclick="closeCategoryDeleteChoice()">×</button>
+    <h2 style="font-size:20px;">Что сделать с привычками из вашей категории?</h2>
+    <div class="buttons">
+      <button type="button">Переместить</button>
+      <button type="button" class="delete-in-modal">Удалить</button>
     </div>
   </div>
 </div>
@@ -619,8 +712,20 @@ const colorMap = {
   black: "#111111",
   red: "#ff3b30",
   green: "#34c759",
-  blue: "#007aff"
+  blue: "#007aff",
+  yellow: "#ffcc00"
 };
+
+
+function showModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.add("open");
+}
+
+function hideModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.remove("open");
+}
 
 function normalizeHabits() {
   habits = habits.map(habit => {
@@ -709,6 +814,40 @@ function isGoodHabit(habit) {
   return (habit.type || "good") === "good";
 }
 
+
+function getCategoryListForRender() {
+  const list = [{ id: "black", name: "", color: "black" }];
+
+  const usedOldColors = ["red", "green", "blue"].filter(colorKey =>
+    habits.some(habit => isGoodHabit(habit) && habit.color === colorKey)
+  );
+
+  usedOldColors.forEach(colorKey => {
+    list.push({
+      id: colorKey,
+      name: categoryNames[colorKey] || "Категория",
+      color: colorKey
+    });
+  });
+
+  customCategories.forEach(cat => {
+    const hasHabits = habits.some(habit => isGoodHabit(habit) && habit.color === cat.id);
+    if (hasHabits) {
+      list.push({
+        id: cat.id,
+        name: cat.name,
+        color: cat.color || "black"
+      });
+    }
+  });
+
+  return list;
+}
+
+function getCategoryRenderColor(category) {
+  return colorMap[category.color] || colorMap.black;
+}
+
 function render() {
   const { result: dates, todayIndex } = getDates();
 
@@ -739,22 +878,23 @@ function render() {
     datesRow.innerHTML += `<div class="day ${date.isToday ? "today" : ""}">${date.label}</div>`;
   });
 
-  categoryOrder.forEach((colorKey, categoryIndex) => {
-    const categoryHabits = habits.filter(habit => isGoodHabit(habit) && habit.color === colorKey);
+  getCategoryListForRender().forEach((category, categoryIndex) => {
+    const categoryKey = category.id;
+    const categoryHabits = habits.filter(habit => isGoodHabit(habit) && (habit.color || "black") === categoryKey);
     if (categoryHabits.length === 0) return;
 
-    const color = colorMap[colorKey];
-    const isCollapsed = collapsedCategories[colorKey];
+    const color = getCategoryRenderColor(category);
+    const isCollapsed = collapsedCategories[categoryKey];
 
-    if (colorKey !== "black") {
+    if (categoryKey !== "black") {
       leftList.innerHTML += `
         <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
-          onclick="openCategoryModal('${colorKey}')"
+          onclick="openCategoryModal('${categoryKey}')"
           ontouchstart="startCategoryDrag(event, ${categoryIndex})"
           ontouchmove="moveCategoryDrag(event)"
           ontouchend="endCategoryDrag(event)">
-          <div class="category-title">${categoryNames[colorKey]}</div>
-          <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
+          <div class="category-title">${category.name}</div>
+          <div class="category-arrow" onclick="toggleCategory(event, '${categoryKey}')" style="color:${color}">
             ${isCollapsed ? "▲" : "▼"}
           </div>
         </div>
@@ -766,7 +906,7 @@ function render() {
     if (isCollapsed) return;
 
     habits.forEach((habit, habitIndex) => {
-      if (!isGoodHabit(habit) || habit.color !== colorKey) return;
+      if (!isGoodHabit(habit) || (habit.color || "black") !== categoryKey) return;
 
       leftList.innerHTML += `
         <div class="habit-left" data-index="${habitIndex}">
@@ -1036,7 +1176,7 @@ function openModal() {
   updateHabitTypeUI(false);
   updateRefusalInfo();
 
-  document.getElementById("modal").style.display = "flex";
+  showModal("modal");
 }
 
 function editHabit(index) {
@@ -1058,7 +1198,7 @@ function editHabit(index) {
 
   updateHabitTypeUI(true);
 
-  document.getElementById("modal").style.display = "flex";
+  showModal("modal");
 
   setTimeout(() => {
     autoResize(document.getElementById("habitDescription"));
@@ -1130,7 +1270,7 @@ function deleteCurrentHabit() {
 }
 
 function closeModal() {
-  document.getElementById("modal").style.display = "none";
+  hideModal("modal");
   hideQuitCalendar();
   editingIndex = null;
 }
@@ -1140,23 +1280,68 @@ function openCategoryModal(colorKey) {
   if (colorKey === "black") return;
 
   editingCategory = colorKey;
-  document.getElementById("categoryTitleInput").value = categoryNames[colorKey];
-  document.getElementById("categoryModal").style.display = "flex";
+
+  const customCategory = customCategories.find(cat => cat.id === colorKey);
+  document.getElementById("categoryTitleInput").value =
+    customCategory ? customCategory.name : (categoryNames[colorKey] || "Категория");
+
+  const categoryColor = document.getElementById("categoryColor");
+  if (categoryColor) {
+    categoryColor.value = customCategory ? (customCategory.color || "black") : colorKey;
+    colorSelect(categoryColor);
+  }
+
+  showModal("categoryModal");
 }
 
 function saveCategoryName() {
   const value = document.getElementById("categoryTitleInput").value.trim();
   if (!value || !editingCategory) return;
 
-  categoryNames[editingCategory] = value;
+  const color = document.getElementById("categoryColor") ? document.getElementById("categoryColor").value : editingCategory;
+  const customCategory = customCategories.find(cat => cat.id === editingCategory);
+
+  if (customCategory) {
+    customCategory.name = value;
+    customCategory.color = color;
+    localStorage.setItem("customCategories", JSON.stringify(customCategories));
+  } else {
+    categoryNames[editingCategory] = value;
+
+    if (color && color !== editingCategory) {
+      habits.forEach(habit => {
+        if (isGoodHabit(habit) && habit.color === editingCategory) {
+          habit.color = color;
+        }
+      });
+
+      categoryNames[color] = value;
+      delete categoryNames[editingCategory];
+
+      collapsedCategories[color] = collapsedCategories[editingCategory];
+      delete collapsedCategories[editingCategory];
+
+      editingCategory = color;
+    }
+  }
+
   save();
   closeCategoryModal();
   render();
 }
 
 function closeCategoryModal() {
-  document.getElementById("categoryModal").style.display = "none";
+  hideModal("categoryModal");
   editingCategory = null;
+}
+
+
+function openCategoryDeleteChoice() {
+  showModal("categoryDeleteChoiceModal");
+}
+
+function closeCategoryDeleteChoice() {
+  hideModal("categoryDeleteChoiceModal");
 }
 
 function updateDescriptionCounter() {
@@ -1176,7 +1361,8 @@ function colorSelect(select) {
     black: "#111111",
     red: "#ff3b30",
     green: "#34c759",
-    blue: "#007aff"
+    blue: "#007aff",
+    yellow: "#ffcc00"
   };
   select.style.color = colors[select.value] || "#111111";
 }
@@ -1207,14 +1393,12 @@ function updateRefusalInfo() {
 }
 
 function toggleQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  calendar.classList.toggle("open");
   renderQuitCalendar();
+  showModal("quitCalendarModal");
 }
 
 function hideQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  if (calendar) calendar.classList.remove("open");
+  hideModal("quitCalendarModal");
 }
 
 function changeCalendarMonth(delta) {
@@ -1292,6 +1476,48 @@ function changeViolations(delta) {
   const current = Number(document.getElementById("violationCount").textContent) || 0;
   setViolationsValue(current + delta);
 }
+
+
+let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [];
+
+function refreshCategorySelect(){
+ const s=document.getElementById('habitColor');
+ if(!s) return;
+ const cur=s.value;
+ s.innerHTML='<option value="black">Нет</option>';
+ customCategories.forEach(c=>{
+   const o=document.createElement('option');
+   o.value=c.id;o.textContent=c.name;o.style.color=c.color;
+   s.appendChild(o);
+ });
+ const a=document.createElement('option');
+ a.value='add_category';a.textContent='➕ Добавить';
+ s.appendChild(a);
+ if(cur && cur!=='add_category') s.value=cur;
+}
+
+function handleCategorySelect(sel){
+ if(sel.value==='add_category'){openNewCategoryModal(); sel.value='black';}
+}
+
+function openNewCategoryModal(){
+ showModal("newCategoryModal");
+}
+function closeNewCategoryModal(){
+ hideModal("newCategoryModal");
+}
+function saveNewCategory(){
+ const name=document.getElementById('newCategoryName').value.trim();
+ const color=document.getElementById('newCategoryColor').value;
+ if(!name) return;
+ const cat={id:'cat_'+Date.now(),name,color};
+ customCategories.push(cat);
+ localStorage.setItem('customCategories',JSON.stringify(customCategories));
+ refreshCategorySelect();
+ document.getElementById('habitColor').value=cat.id;
+ closeNewCategoryModal();
+}
+refreshCategorySelect();
 
 render();
 </script>
