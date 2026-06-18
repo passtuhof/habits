@@ -215,7 +215,7 @@ button {
 .bad-habit-row {
   min-height: var(--row-height);
   display: grid;
-  grid-template-columns: var(--left-width) 1fr;
+  grid-template-columns: minmax(0, 1fr) 150px;
   gap: 8px;
   align-items: center;
   border-bottom: 1px solid #eee;
@@ -237,9 +237,10 @@ button {
 
 .bad-status {
   text-align: right;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #111;
+  line-height: 1.15;
 }
 
 .modal {
@@ -323,7 +324,21 @@ textarea {
 }
 
 .quit-date-wrap { position: relative; }
-#quitDateDisplay { cursor: pointer; }
+#quitDateDisplay {
+  cursor: pointer;
+  padding-right: 38px;
+}
+
+.quit-date-wrap::after {
+  content: "↕";
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #777;
+  pointer-events: none;
+}
 
 .quit-calendar {
   display: none;
