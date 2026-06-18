@@ -506,7 +506,7 @@ textarea {
   </div>
 
   <div class="bad-section" id="badSection">
-    <div class="bad-section-title good-section-title" id="badSectionTitle">Отказ от плохих привычек</div>
+    <div class="bad-section-title" id="badSectionTitle">Отказ от плохих привычек</div>
     <div id="badList"></div>
   </div>
 </div>
@@ -620,7 +620,8 @@ const colorMap = {
   black: "#111111",
   red: "#ff3b30",
   green: "#34c759",
-  blue: "#007aff"
+  blue: "#007aff",
+  yellow: "#ffcc00"
 };
 
 function normalizeHabits() {
@@ -710,6 +711,40 @@ function isGoodHabit(habit) {
   return (habit.type || "good") === "good";
 }
 
+
+function getCategoryListForRender() {
+  const list = [{ id: "black", name: "", color: "black" }];
+
+  const usedOldColors = ["red", "green", "blue"].filter(colorKey =>
+    habits.some(habit => isGoodHabit(habit) && habit.color === colorKey)
+  );
+
+  usedOldColors.forEach(colorKey => {
+    list.push({
+      id: colorKey,
+      name: categoryNames[colorKey] || "Категория",
+      color: colorKey
+    });
+  });
+
+  customCategories.forEach(cat => {
+    const hasHabits = habits.some(habit => isGoodHabit(habit) && habit.color === cat.id);
+    if (hasHabits) {
+      list.push({
+        id: cat.id,
+        name: cat.name,
+        color: cat.color || "black"
+      });
+    }
+  });
+
+  return list;
+}
+
+function getCategoryRenderColor(category) {
+  return colorMap[category.color] || colorMap.black;
+}
+
 function render() {
   const { result: dates, todayIndex } = getDates();
 
@@ -740,22 +775,23 @@ function render() {
     datesRow.innerHTML += `<div class="day ${date.isToday ? "today" : ""}">${date.label}</div>`;
   });
 
-  categoryOrder.forEach((colorKey, categoryIndex) => {
-    const categoryHabits = habits.filter(habit => isGoodHabit(habit) && habit.color === colorKey);
+  getCategoryListForRender().forEach((category, categoryIndex) => {
+    const categoryKey = category.id;
+    const categoryHabits = habits.filter(habit => isGoodHabit(habit) && (habit.color || "black") === categoryKey);
     if (categoryHabits.length === 0) return;
 
-    const color = colorMap[colorKey];
-    const isCollapsed = collapsedCategories[colorKey];
+    const color = getCategoryRenderColor(category);
+    const isCollapsed = collapsedCategories[categoryKey];
 
-    if (colorKey !== "black") {
+    if (categoryKey !== "black") {
       leftList.innerHTML += `
         <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
-          onclick="openCategoryModal('${colorKey}')"
+          onclick="openCategoryModal('${categoryKey}')"
           ontouchstart="startCategoryDrag(event, ${categoryIndex})"
           ontouchmove="moveCategoryDrag(event)"
           ontouchend="endCategoryDrag(event)">
-          <div class="category-title">${categoryNames[colorKey]}</div>
-          <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
+          <div class="category-title">${category.name}</div>
+          <div class="category-arrow" onclick="toggleCategory(event, '${categoryKey}')" style="color:${color}">
             ${isCollapsed ? "▲" : "▼"}
           </div>
         </div>
@@ -767,7 +803,7 @@ function render() {
     if (isCollapsed) return;
 
     habits.forEach((habit, habitIndex) => {
-      if (!isGoodHabit(habit) || habit.color !== colorKey) return;
+      if (!isGoodHabit(habit) || (habit.color || "black") !== categoryKey) return;
 
       leftList.innerHTML += `
         <div class="habit-left" data-index="${habitIndex}">
@@ -1141,7 +1177,11 @@ function openCategoryModal(colorKey) {
   if (colorKey === "black") return;
 
   editingCategory = colorKey;
-  document.getElementById("categoryTitleInput").value = categoryNames[colorKey];
+
+  const customCategory = customCategories.find(cat => cat.id === colorKey);
+  document.getElementById("categoryTitleInput").value =
+    customCategory ? customCategory.name : (categoryNames[colorKey] || "Категория");
+
   document.getElementById("categoryModal").style.display = "flex";
 }
 
@@ -1149,7 +1189,15 @@ function saveCategoryName() {
   const value = document.getElementById("categoryTitleInput").value.trim();
   if (!value || !editingCategory) return;
 
-  categoryNames[editingCategory] = value;
+  const customCategory = customCategories.find(cat => cat.id === editingCategory);
+
+  if (customCategory) {
+    customCategory.name = value;
+    localStorage.setItem("customCategories", JSON.stringify(customCategories));
+  } else {
+    categoryNames[editingCategory] = value;
+  }
+
   save();
   closeCategoryModal();
   render();
