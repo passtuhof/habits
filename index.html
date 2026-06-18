@@ -75,7 +75,7 @@ button {
 }
 
 .corner {
-  height: 34px;
+  height: 24px;
   margin-bottom: 0;
 }
 
@@ -91,7 +91,7 @@ button {
   gap: 4px;
   border-bottom: 1px solid #eee;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
   touch-action: none;
 }
 
@@ -164,7 +164,7 @@ button {
 }
 
 .dates-row {
-  height: 38px;
+  height: 24px;
   margin-bottom: 0;
 }
 
@@ -327,29 +327,14 @@ textarea {
 .quit-date-wrap { position: relative; }
 #quitDateDisplay {
   cursor: pointer;
-  padding-right: 38px;
-}
-
-.quit-date-wrap::after {
-  content: "";
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-35%);
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 6px solid #777;
-  pointer-events: none;
 }
 
 .quit-calendar {
-  display: none;
+  display: block;
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -46%) scale(0.96);
   width: min(320px, calc(100vw - 48px));
   z-index: 60;
   background: #fff;
@@ -357,6 +342,17 @@ textarea {
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
+}
+
+.quit-calendar.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .calendar-head {
@@ -419,8 +415,41 @@ textarea {
 .refusal-info {
   font-size: 13px;
   font-weight: 700;
-  margin: -2px 0 12px;
+  margin: -2px 0 8px;
   color: #111;
+}
+
+.violations-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.violation-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.violation-btn:disabled {
+  background: #ddd;
+  color: #999;
+}
+
+.violation-count {
+  min-width: 24px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .buttons {
@@ -436,12 +465,29 @@ textarea {
 .cancel { background: #ddd; color: #111; }
 .delete-in-modal { background: #eee; color: #111; }
 
-#habitColor { font-weight: 700; }
-#habitColor option { font-weight: 700; }
-#habitColor option[value="black"] { color: #111111; }
+#habitColorDisplay { font-weight: 400; cursor: pointer; }
 #habitColor option[value="red"] { color: #ff3b30; }
-#habitColor option[value="green"] { color: #34c759; }
-#habitColor option[value="blue"] { color: #007aff; }
+#habitColorDisplay { color: #111111; }
+.picker-item {
+  text-align: left;
+  padding: 11px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  background: #f3f3f3;
+  color: #111;
+  margin-bottom: 6px;
+}
+.picker-item:last-child { margin-bottom: 0; }
+.picker-item.add { color: #777; font-weight: 700; }
+.picker-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+#newCategoryColorDisplay {
+  cursor: pointer;
+  font-weight: 400;
+}
 
 @media (max-width: 390px) {
   :root {
@@ -500,12 +546,9 @@ textarea {
 
     <div id="goodFields">
       <div class="label">Категория</div>
-      <select id="habitColor" onchange="colorSelect(this)">
-        <option value="black" style="color:#111111;font-weight:700;">Нет</option>
-        <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
-        <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
-        <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
-      </select>
+      <input id="habitColorDisplay" readonly value="Нет" onclick="openCategoryPicker()">
+      <input id="habitColor" type="hidden" value="black">
+      <div id="categoryPicker" class="quit-calendar"></div>
     </div>
 
     <div id="badFields" style="display:none;">
@@ -516,12 +559,35 @@ textarea {
         <div id="quitCalendar" class="quit-calendar"></div>
       </div>
       <div class="refusal-info" id="refusalInfo"></div>
+      <div class="violations-row" id="violationsRow">
+        <span>Нарушения</span>
+        <button type="button" class="violation-btn" id="violationMinus" onclick="changeViolations(-1)">−</button>
+        <span class="violation-count" id="violationCount">0</span>
+        <button type="button" class="violation-btn" onclick="changeViolations(1)">+</button>
+      </div>
     </div>
 
     <div class="buttons">
       <button onclick="saveHabit()">Сохранить</button>
       <button class="cancel" onclick="closeModal()">Отмена</button>
       <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="newCategoryModal">
+  <div class="modal-content">
+    <h2>Новая категория</h2>
+    <div class="label">Название категории</div>
+    <input id="newCategoryName" placeholder="Название категории">
+    <div class="label">Цвет категории</div>
+    <input id="newCategoryColorDisplay" readonly value="Красный" onclick="openColorPicker()">
+    <input id="newCategoryColor" type="hidden" value="red">
+    <div id="colorPicker" class="quit-calendar"></div>
+    <div class="buttons">
+      <button onclick="saveNewCategory()">Сохранить</button>
+      <button class="cancel" onclick="closeNewCategoryModal()">Отмена</button>
     </div>
   </div>
 </div>
@@ -541,678 +607,118 @@ textarea {
 let habits = JSON.parse(localStorage.getItem("habits")) || [];
 
 let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
-  black: "",
-  red: "Категория",
-  green: "Категория",
-  blue: "Категория"
+  black: ""
 };
 
-let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black", "red", "green", "blue"];
-let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")) || {};
 
-let editingIndex = null;
-let editingCategory = null;
-let currentHabitType = "good";
+function setSelectedCategory(categoryId) {
+  const id = categoryId || "black";
+  const hidden = document.getElementById("habitColor");
+  const display = document.getElementById("habitColorDisplay");
+  const color = getCategoryColor(id);
 
-let dragIndex = null;
-let dragColor = null;
-let dragBadIndex = null;
-let dragCategoryIndex = null;
-let startY = 0;
-
-let calendarViewDate = new Date();
-calendarViewDate.setHours(0, 0, 0, 0);
-
-const colorMap = {
-  black: "#111111",
-  red: "#ff3b30",
-  green: "#34c759",
-  blue: "#007aff"
-};
-
-function normalizeHabits() {
-  habits = habits.map(habit => {
-    if (!habit.type) habit.type = "good";
-    if (habit.type === "bad" && !habit.quitDate) habit.quitDate = todayKey();
-    return habit;
-  });
-}
-
-normalizeHabits();
-
-function save() {
-  localStorage.setItem("habits", JSON.stringify(habits));
-  localStorage.setItem("categoryNames", JSON.stringify(categoryNames));
-  localStorage.setItem("categoryOrder", JSON.stringify(categoryOrder));
-  localStorage.setItem("collapsedCategories", JSON.stringify(collapsedCategories));
-}
-
-function toDateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function todayKey() {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return toDateKey(date);
-}
-
-function daysSince(dateKey) {
-  const start = new Date(dateKey + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = today - start;
-  return Math.max(0, Math.floor(diff / 86400000));
-}
-
-function dayWord(n) {
-  if (n % 10 === 1 && n % 100 !== 11) return "день";
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return "дня";
-  return "дней";
-}
-
-function getDates() {
-  const days = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-  const result = [];
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const startPast = new Date(today);
-  startPast.setMonth(startPast.getMonth() - 1);
-  const futureDays = 30;
-
-  for (let d = new Date(startPast); d < today; d.setDate(d.getDate() + 1)) {
-    result.push(makeDateObject(new Date(d), false));
+  if (hidden) hidden.value = id;
+  if (display) {
+    display.value = id === "black" ? "Нет" : getCategoryName(id);
+    display.style.color = color;
+    display.style.fontWeight = "400";
   }
-
-  const todayIndex = result.length;
-
-  for (let i = 0; i <= futureDays; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    result.push(makeDateObject(date, i === 0));
-  }
-
-  function makeDateObject(date, isToday) {
-    const dayName = days[date.getDay()];
-    const dd = String(date.getDate()).padStart(2, "0");
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-
-    return {
-      label: `${dayName}<br>${dd}.${mm}`,
-      key: toDateKey(date),
-      isToday
-    };
-  }
-
-  return { result, todayIndex };
 }
 
-function isGoodHabit(habit) {
-  return (habit.type || "good") === "good";
-}
+function openCategoryPicker() {
+  const picker = document.getElementById("categoryPicker");
+  if (!picker) return;
 
-function render() {
-  const { result: dates, todayIndex } = getDates();
+  let html = `<div class="picker-title">Категория</div>`;
 
-  document.documentElement.style.setProperty("--days-count", dates.length);
+  html += `<div class="picker-item" style="color:#111111" onclick="setSelectedCategory('black'); closeCategoryPicker();">Нет</div>`;
 
-  const datesRow = document.getElementById("datesRow");
-  const leftList = document.getElementById("leftList");
-  const checksList = document.getElementById("checksList");
-  const badList = document.getElementById("badList");
-  const badSectionTitle = document.getElementById("badSectionTitle");
-  const goodTitle = document.getElementById("goodTitle");
-  const emptyState = document.getElementById("emptyState");
-  const goodTracker = document.getElementById("goodTracker");
-
-  const goodHabits = habits.filter(isGoodHabit);
-  const badHabits = habits.filter(habit => habit.type === "bad");
-
-  emptyState.style.display = habits.length === 0 ? "block" : "none";
-  goodTitle.style.display = goodHabits.length ? "block" : "none";
-  goodTracker.style.display = goodHabits.length ? "grid" : "none";
-
-  datesRow.innerHTML = "";
-  leftList.innerHTML = "";
-  checksList.innerHTML = "";
-  badList.innerHTML = "";
-
-  dates.forEach(date => {
-    datesRow.innerHTML += `<div class="day ${date.isToday ? "today" : ""}">${date.label}</div>`;
+  customCategories.forEach(cat => {
+    const color = colorMap[cat.color] || colorMap.black;
+    html += `<div class="picker-item" style="color:${color}" onclick="setSelectedCategory('${cat.id}'); closeCategoryPicker();">${cat.name}</div>`;
   });
 
-  categoryOrder.forEach((colorKey, categoryIndex) => {
-    const categoryHabits = habits.filter(habit => isGoodHabit(habit) && habit.color === colorKey);
-    if (categoryHabits.length === 0) return;
+  html += `<div class="picker-item add" onclick="closeCategoryPicker(); openNewCategoryModal();">➕ Добавить</div>`;
 
-    const color = colorMap[colorKey];
-    const isCollapsed = collapsedCategories[colorKey];
-
-    if (colorKey !== "black") {
-      leftList.innerHTML += `
-        <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
-          onclick="openCategoryModal('${colorKey}')"
-          ontouchstart="startCategoryDrag(event, ${categoryIndex})"
-          ontouchmove="moveCategoryDrag(event)"
-          ontouchend="endCategoryDrag(event)">
-          <div class="category-title">${categoryNames[colorKey]}</div>
-          <div class="category-arrow" onclick="toggleCategory(event, '${colorKey}')" style="color:${color}">
-            ${isCollapsed ? "▲" : "▼"}
-          </div>
-        </div>
-      `;
-
-      checksList.innerHTML += `<div class="category-spacer"></div>`;
-    }
-
-    if (isCollapsed) return;
-
-    habits.forEach((habit, habitIndex) => {
-      if (!isGoodHabit(habit) || habit.color !== colorKey) return;
-
-      leftList.innerHTML += `
-        <div class="habit-left" data-index="${habitIndex}">
-          <div class="name-wrap"
-            onclick="editHabit(${habitIndex})"
-            ontouchstart="startDrag(event, ${habitIndex})"
-            ontouchmove="moveDrag(event)"
-            ontouchend="endDrag(event)">
-            <div class="habit-name" style="color:${color}">${habit.title}</div>
-          </div>
-        </div>
-      `;
-
-      let row = `<div class="check-row" style="--habit-color:${color}">`;
-
-      dates.forEach(date => {
-        const done = habit.done && habit.done[date.key];
-        row += `<div class="cell ${done ? "done" : ""}" onclick="toggleHabit(${habitIndex}, '${date.key}')"></div>`;
-      });
-
-      row += `</div>`;
-      checksList.innerHTML += row;
-    });
-  });
-
-  badSectionTitle.style.display = badHabits.length ? "block" : "none";
-
-  badHabits.forEach((habit, badPosition) => {
-    const realIndex = habits.indexOf(habit);
-    const count = daysSince(habit.quitDate || todayKey());
-
-    badList.innerHTML += `
-      <div class="bad-habit-row" data-bad-index="${badPosition}">
-        <div class="bad-habit-name"
-          onclick="editHabit(${realIndex})"
-          ontouchstart="startBadDrag(event, ${badPosition})"
-          ontouchmove="moveBadDrag(event)"
-          ontouchend="endBadDrag(event)">${habit.title}</div>
-        <div class="bad-status">Вы отказались ${count} ${dayWord(count)} назад</div>
-      </div>
-    `;
-  });
-
-  setTimeout(() => {
-    const scroll = document.getElementById("rightScroll");
-    if (!window.initialScrollDone) {
-      const dayWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--day-width"));
-      scroll.scrollLeft = todayIndex * (dayWidth + 3);
-      window.initialScrollDone = true;
-    }
-  }, 0);
+  picker.innerHTML = html;
+  picker.classList.add("open");
 }
 
-function toggleCategory(event, colorKey) {
-  event.stopPropagation();
-  collapsedCategories[colorKey] = !collapsedCategories[colorKey];
-  save();
-  render();
+function closeCategoryPicker() {
+  const picker = document.getElementById("categoryPicker");
+  if (picker) picker.classList.remove("open");
 }
 
-function startCategoryDrag(event, index) {
-  dragCategoryIndex = index;
-  startY = event.touches[0].clientY;
-  const row = document.querySelector(`[data-category-index="${index}"]`);
-  if (row) row.classList.add("dragging");
+function handleCategorySelect() {
+  openCategoryPicker();
 }
 
-function moveCategoryDrag(event) {
-  event.preventDefault();
-  if (dragCategoryIndex === null) return;
-
-  const currentY = event.touches[0].clientY;
-  const diff = currentY - startY;
-
-  if (diff > 34 && dragCategoryIndex < categoryOrder.length - 1) {
-    const temp = categoryOrder[dragCategoryIndex];
-    categoryOrder[dragCategoryIndex] = categoryOrder[dragCategoryIndex + 1];
-    categoryOrder[dragCategoryIndex + 1] = temp;
-    dragCategoryIndex++;
-    startY = currentY;
-    save();
-    render();
-  }
-
-  if (diff < -34 && dragCategoryIndex > 0) {
-    const temp = categoryOrder[dragCategoryIndex];
-    categoryOrder[dragCategoryIndex] = categoryOrder[dragCategoryIndex - 1];
-    categoryOrder[dragCategoryIndex - 1] = temp;
-    dragCategoryIndex--;
-    startY = currentY;
-    save();
-    render();
-  }
+function openNewCategoryModal() {
+  document.getElementById("newCategoryName").value = "";
+  setSelectedNewCategoryColor("red");
+  document.getElementById("newCategoryModal").style.display = "flex";
 }
 
-function endCategoryDrag() {
-  dragCategoryIndex = null;
-  document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
+function closeNewCategoryModal() {
+  document.getElementById("newCategoryModal").style.display = "none";
+  closeColorPicker();
 }
 
-function startDrag(event, index) {
-  if (!isGoodHabit(habits[index])) return;
-  dragIndex = index;
-  dragColor = habits[index].color;
-  startY = event.touches[0].clientY;
-  const row = document.querySelector(`[data-index="${index}"]`);
-  if (row) row.classList.add("dragging");
-}
-
-function moveDrag(event) {
-  event.preventDefault();
-  if (dragIndex === null) return;
-
-  const currentY = event.touches[0].clientY;
-  const diff = currentY - startY;
-
-  if (diff > 42) {
-    moveWithinCategory(1);
-    startY = currentY;
-  }
-
-  if (diff < -42) {
-    moveWithinCategory(-1);
-    startY = currentY;
-  }
-}
-
-function moveWithinCategory(direction) {
-  const sameColorIndexes = habits
-    .map((habit, index) => ({ habit, index }))
-    .filter(item => isGoodHabit(item.habit) && item.habit.color === dragColor)
-    .map(item => item.index);
-
-  const currentPosition = sameColorIndexes.indexOf(dragIndex);
-  const targetPosition = currentPosition + direction;
-  if (targetPosition < 0 || targetPosition >= sameColorIndexes.length) return;
-
-  const targetIndex = sameColorIndexes[targetPosition];
-  const temp = habits[dragIndex];
-  habits[dragIndex] = habits[targetIndex];
-  habits[targetIndex] = temp;
-  dragIndex = targetIndex;
-
-  save();
-  render();
-
-  const row = document.querySelector(`[data-index="${dragIndex}"]`);
-  if (row) row.classList.add("dragging");
-}
-
-function endDrag() {
-  dragIndex = null;
-  dragColor = null;
-  document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("dragging"));
-}
-
-function startBadDrag(event, badPosition) {
-  dragBadIndex = badPosition;
-  startY = event.touches[0].clientY;
-  const row = document.querySelector(`[data-bad-index="${badPosition}"]`);
-  if (row) row.classList.add("dragging");
-}
-
-function moveBadDrag(event) {
-  event.preventDefault();
-  if (dragBadIndex === null) return;
-
-  const currentY = event.touches[0].clientY;
-  const diff = currentY - startY;
-
-  if (diff > 42) {
-    moveBadHabit(1);
-    startY = currentY;
-  }
-
-  if (diff < -42) {
-    moveBadHabit(-1);
-    startY = currentY;
-  }
-}
-
-function moveBadHabit(direction) {
-  const badIndexes = habits
-    .map((habit, index) => ({ habit, index }))
-    .filter(item => item.habit.type === "bad")
-    .map(item => item.index);
-
-  const currentHabitIndex = badIndexes[dragBadIndex];
-  const targetBadPosition = dragBadIndex + direction;
-  if (targetBadPosition < 0 || targetBadPosition >= badIndexes.length) return;
-
-  const targetHabitIndex = badIndexes[targetBadPosition];
-  const temp = habits[currentHabitIndex];
-  habits[currentHabitIndex] = habits[targetHabitIndex];
-  habits[targetHabitIndex] = temp;
-  dragBadIndex = targetBadPosition;
-
-  save();
-  render();
-
-  const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-  if (row) row.classList.add("dragging");
-}
-
-function endBadDrag() {
-  dragBadIndex = null;
-  document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("dragging"));
-}
-
-function toggleHabit(habitIndex, dateKey) {
-  if (!isGoodHabit(habits[habitIndex])) return;
-
-  if (!habits[habitIndex].done) habits[habitIndex].done = {};
-  habits[habitIndex].done[dateKey] = !habits[habitIndex].done[dateKey];
-
-  save();
-  render();
-}
-
-function setHabitType(type) {
-  if (editingIndex !== null) return;
-  currentHabitType = type;
-  updateHabitTypeUI(false);
-}
-
-function updateHabitTypeUI(disabled) {
-  const goodBtn = document.getElementById("goodTypeBtn");
-  const badBtn = document.getElementById("badTypeBtn");
-  const goodFields = document.getElementById("goodFields");
-  const badFields = document.getElementById("badFields");
-
-  goodBtn.classList.toggle("active", currentHabitType === "good");
-  badBtn.classList.toggle("active", currentHabitType === "bad");
-  goodBtn.disabled = disabled;
-  badBtn.disabled = disabled;
-
-  goodFields.style.display = currentHabitType === "good" ? "block" : "none";
-  badFields.style.display = currentHabitType === "bad" ? "block" : "none";
-
-  if (currentHabitType === "bad") {
-    if (!document.getElementById("quitDate").value) setQuitDateValue(todayKey());
-    updateRefusalInfo();
-  } else {
-    hideQuitCalendar();
-  }
-}
-
-function openModal() {
-  editingIndex = null;
-  currentHabitType = "good";
-
-  document.getElementById("modalTitle").textContent = "Новая привычка";
-  document.getElementById("habitTitle").value = "";
-  document.getElementById("habitDescription").value = "";
-  document.getElementById("habitDescription").style.height = "74px";
-  updateDescriptionCounter();
-  document.getElementById("habitColor").value = "black";
-  colorSelect(document.getElementById("habitColor"));
-  setQuitDateValue(todayKey());
-  document.getElementById("deleteButton").style.display = "none";
-
-  updateHabitTypeUI(false);
-  updateRefusalInfo();
-
-  document.getElementById("modal").style.display = "flex";
-}
-
-function editHabit(index) {
-  if (dragIndex !== null || dragBadIndex !== null) return;
-
-  editingIndex = index;
-  currentHabitType = habits[index].type === "bad" ? "bad" : "good";
-
-  document.getElementById("modalTitle").textContent = "Редактировать привычку";
-  document.getElementById("habitTitle").value = habits[index].title;
-  document.getElementById("habitDescription").value = habits[index].description || "";
-  updateDescriptionCounter();
-  document.getElementById("habitColor").value = habits[index].color || "black";
-  colorSelect(document.getElementById("habitColor"));
-  setQuitDateValue(habits[index].quitDate || todayKey());
-  document.getElementById("deleteButton").style.display = "block";
-
-  updateHabitTypeUI(true);
-
-  document.getElementById("modal").style.display = "flex";
-
-  setTimeout(() => {
-    autoResize(document.getElementById("habitDescription"));
-    updateRefusalInfo();
-  }, 0);
-}
-
-function saveHabit() {
-  const title = document.getElementById("habitTitle").value.trim();
-  const description = document.getElementById("habitDescription").value.trim();
-  const color = document.getElementById("habitColor").value;
-  const quitDate = document.getElementById("quitDate").value || todayKey();
-
-  if (!title) return;
-
-  if (editingIndex !== null) {
-    habits[editingIndex].title = title;
-    habits[editingIndex].description = description;
-
-    if (currentHabitType === "good") {
-      habits[editingIndex].type = "good";
-      habits[editingIndex].color = color;
-      delete habits[editingIndex].quitDate;
-    } else {
-      habits[editingIndex].type = "bad";
-      habits[editingIndex].quitDate = quitDate;
-      habits[editingIndex].color = "black";
-      delete habits[editingIndex].done;
-    }
-  } else {
-    if (currentHabitType === "good") {
-      habits.push({
-        id: Date.now(),
-        type: "good",
-        title,
-        description,
-        color,
-        done: {}
-      });
-    } else {
-      habits.push({
-        id: Date.now(),
-        type: "bad",
-        title,
-        description,
-        color: "black",
-        quitDate
-      });
-    }
-  }
-
-  save();
-  closeModal();
-  render();
-}
-
-function deleteCurrentHabit() {
-  if (editingIndex === null) return;
-
-  if (confirm("Удалить привычку?")) {
-    habits.splice(editingIndex, 1);
-    save();
-    closeModal();
-    render();
-  }
-}
-
-function closeModal() {
-  document.getElementById("modal").style.display = "none";
-  hideQuitCalendar();
-  editingIndex = null;
-}
-
-function openCategoryModal(colorKey) {
-  if (dragCategoryIndex !== null) return;
-  if (colorKey === "black") return;
-
-  editingCategory = colorKey;
-  document.getElementById("categoryTitleInput").value = categoryNames[colorKey];
-  document.getElementById("categoryModal").style.display = "flex";
-}
-
-function saveCategoryName() {
-  const value = document.getElementById("categoryTitleInput").value.trim();
-  if (!value || !editingCategory) return;
-
-  categoryNames[editingCategory] = value;
-  save();
-  closeCategoryModal();
-  render();
-}
-
-function closeCategoryModal() {
-  document.getElementById("categoryModal").style.display = "none";
-  editingCategory = null;
-}
-
-function updateDescriptionCounter() {
-  const textarea = document.getElementById("habitDescription");
-  if (textarea.value.length > 1000) textarea.value = textarea.value.slice(0, 1000);
-  document.getElementById("descriptionCounter").textContent = `${textarea.value.length}/1000`;
-  autoResize(textarea);
-}
-
-function autoResize(textarea) {
-  textarea.style.height = "auto";
-  textarea.style.height = textarea.scrollHeight + "px";
-}
-
-function colorSelect(select) {
-  const colors = {
-    black: "#111111",
-    red: "#ff3b30",
-    green: "#34c759",
-    blue: "#007aff"
+function setSelectedNewCategoryColor(colorKey) {
+  const display = document.getElementById("newCategoryColorDisplay");
+  const hidden = document.getElementById("newCategoryColor");
+  const names = {
+    red: "Красный",
+    blue: "Синий",
+    green: "Зелёный",
+    yellow: "Жёлтый"
   };
-  select.style.color = colors[select.value] || "#111111";
+
+  if (hidden) hidden.value = colorKey;
+  if (display) {
+    display.value = names[colorKey] || "Красный";
+    display.style.color = colorMap[colorKey] || colorMap.red;
+    display.style.fontWeight = "400";
+  }
 }
 
-function formatDisplayDate(dateKey) {
-  const [y, m, d] = dateKey.split("-");
-  return `${d}.${m}.${y}`;
-}
+function openColorPicker() {
+  const picker = document.getElementById("colorPicker");
+  if (!picker) return;
 
-function setQuitDateValue(dateKey) {
-  const max = todayKey();
-  if (!dateKey || dateKey > max) dateKey = max;
-
-  document.getElementById("quitDate").value = dateKey;
-  document.getElementById("quitDateDisplay").value = formatDisplayDate(dateKey);
-
-  calendarViewDate = new Date(dateKey + "T00:00:00");
-  calendarViewDate.setHours(0, 0, 0, 0);
-
-  updateRefusalInfo();
-  renderQuitCalendar();
-}
-
-function updateRefusalInfo() {
-  const quitDate = document.getElementById("quitDate").value || todayKey();
-  const count = daysSince(quitDate);
-  document.getElementById("refusalInfo").textContent = `Вы отказались ${count} ${dayWord(count)} назад`;
-}
-
-function toggleQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  calendar.style.display = calendar.style.display === "block" ? "none" : "block";
-  renderQuitCalendar();
-}
-
-function hideQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  if (calendar) calendar.style.display = "none";
-}
-
-function changeCalendarMonth(delta) {
-  calendarViewDate.setMonth(calendarViewDate.getMonth() + delta);
-  renderQuitCalendar();
-}
-
-function renderQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  if (!calendar) return;
-
-  const today = new Date(todayKey() + "T00:00:00");
-  const selectedKey = document.getElementById("quitDate").value || todayKey();
-
-  const year = calendarViewDate.getFullYear();
-  const month = calendarViewDate.getMonth();
-  const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-  const weekdays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-
-  const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const nextMonth = new Date(year, month + 1, 1);
-  const nextDisabled = nextMonth > currentMonth;
-
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const offset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-
-  let html = `
-    <div class="calendar-head">
-      <button type="button" onclick="changeCalendarMonth(-1)">‹</button>
-      <div>${monthNames[month]} ${year}</div>
-      <button type="button" onclick="changeCalendarMonth(1)" ${nextDisabled ? "disabled" : ""}>›</button>
-    </div>
-    <div class="calendar-grid">
+  picker.innerHTML = `
+    <div class="picker-title">Цвет</div>
+    <div class="picker-item" style="color:${colorMap.red}" onclick="setSelectedNewCategoryColor('red'); closeColorPicker();">Красный</div>
+    <div class="picker-item" style="color:${colorMap.blue}" onclick="setSelectedNewCategoryColor('blue'); closeColorPicker();">Синий</div>
+    <div class="picker-item" style="color:${colorMap.green}" onclick="setSelectedNewCategoryColor('green'); closeColorPicker();">Зелёный</div>
+    <div class="picker-item" style="color:${colorMap.yellow}" onclick="setSelectedNewCategoryColor('yellow'); closeColorPicker();">Жёлтый</div>
   `;
 
-  weekdays.forEach(day => {
-    html += `<div class="calendar-weekday">${day}</div>`;
-  });
+  picker.classList.add("open");
+}
 
-  for (let i = 0; i < offset; i++) {
-    html += `<div class="calendar-day empty"></div>`;
-  }
+function closeColorPicker() {
+  const picker = document.getElementById("colorPicker");
+  if (picker) picker.classList.remove("open");
+}
 
-  for (let day = 1; day <= lastDay.getDate(); day++) {
-    const date = new Date(year, month, day);
-    date.setHours(0, 0, 0, 0);
-    const key = toDateKey(date);
-    const disabled = date > today;
-    const selected = key === selectedKey;
+function saveNewCategory() {
+  const name = document.getElementById("newCategoryName").value.trim();
+  const color = document.getElementById("newCategoryColor").value || "red";
 
-    html += `
-      <div class="calendar-day ${disabled ? "disabled" : ""} ${selected ? "selected" : ""}"
-        ${disabled ? "" : `onclick="setQuitDateValue('${key}'); hideQuitCalendar();"`}>
-        ${day}
-      </div>
-    `;
-  }
+  if (!name) return;
 
-  html += `</div>`;
-  calendar.innerHTML = html;
+  const cat = {
+    id: "cat_" + Date.now(),
+    name,
+    color
+  };
+
+  customCategories.push(cat);
+  save();
+  setSelectedCategory(cat.id);
+  closeNewCategoryModal();
+  render();
 }
 
 render();
