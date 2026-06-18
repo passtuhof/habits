@@ -1403,6 +1403,36 @@ function updateHabitTypeToggleUI(typePreview = currentHabitType) {
   badBtn.classList.toggle("active", isBad);
 }
 
+
+function updateHabitTypeFieldsOnly() {
+  const goodFields = document.getElementById("goodFields");
+  const badFields = document.getElementById("badFields");
+
+  if (!goodFields || !badFields) return;
+
+  goodFields.style.display = currentHabitType === "good" ? "block" : "none";
+  badFields.style.display = currentHabitType === "bad" ? "block" : "none";
+
+  if (currentHabitType === "bad") {
+    if (!document.getElementById("quitDate").value) setQuitDateValue(todayKey());
+    updateRefusalInfo();
+  } else {
+    hideQuitCalendar();
+  }
+
+  updateViolationsVisibility();
+  updateHabitSaveButton();
+}
+
+function setHabitTypeDragPreview(typePreview) {
+  if (editingIndex !== null) return;
+
+  if (currentHabitType !== typePreview) {
+    currentHabitType = typePreview;
+    updateHabitTypeFieldsOnly();
+  }
+}
+
 function updateHabitTypeTogglePreview(typePreview) {
   const switcher = document.querySelector("#modal .type-switch");
   const goodBtn = document.getElementById("goodTypeBtn");
@@ -1457,6 +1487,7 @@ function initHabitTypeToggleDrag() {
 
     switcher.style.setProperty("--habit-type-shift", shift + "%");
     updateHabitTypeTogglePreview(previewType);
+    setHabitTypeDragPreview(previewType);
   }, { passive: false });
 
   function finishDrag(event) {
