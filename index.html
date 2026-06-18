@@ -61,11 +61,7 @@ button {
   margin-bottom: 10px;
 }
 
-.good-title-main {
-  display: none;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-}
+.good-title-main { display: none; }
 
 .tracker {
   display: grid;
@@ -75,7 +71,7 @@ button {
 }
 
 .corner {
-  height: 30px;
+  height: 38px;
   margin-bottom: 0;
 }
 
@@ -164,7 +160,7 @@ button {
 }
 
 .dates-row {
-  height: 30px;
+  height: 38px;
   margin-bottom: 0;
 }
 
@@ -215,7 +211,7 @@ button {
 .bad-habit-row {
   min-height: var(--row-height);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-columns: var(--left-width) 1fr;
   gap: 8px;
   align-items: center;
   border-bottom: 1px solid #eee;
@@ -237,11 +233,9 @@ button {
 
 .bad-status {
   text-align: right;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #111;
-  line-height: 1.15;
-  white-space: nowrap;
 }
 
 .modal {
@@ -325,16 +319,14 @@ textarea {
 }
 
 .quit-date-wrap { position: relative; }
-#quitDateDisplay {
-  cursor: pointer;
-}
+#quitDateDisplay { cursor: pointer; }
 
 .quit-calendar {
-  display: block;
+  display: none;
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -46%) scale(0.96);
+  transform: translate(-50%, -50%);
   width: min(320px, calc(100vw - 48px));
   z-index: 60;
   background: #fff;
@@ -342,17 +334,6 @@ textarea {
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 14px 34px rgba(0,0,0,0.22);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
-}
-
-.quit-calendar.open {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
 }
 
 .calendar-head {
@@ -512,6 +493,13 @@ textarea {
         <div id="quitCalendar" class="quit-calendar"></div>
       </div>
       <div class="refusal-info" id="refusalInfo"></div>
+      <div class="violations-row" id="violationsRow">
+        <span>Нарушения</span>
+        <button type="button" class="violation-btn" id="violationMinus" onclick="changeViolations(-1)">−</button>
+        <span class="violation-count" id="violationCount">0</span>
+        <button type="button" class="violation-btn" onclick="changeViolations(1)">+</button>
+      </div>
+
     </div>
 
     <div class="buttons">
@@ -617,8 +605,7 @@ function getDates() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const startPast = new Date(today);
-  startPast.setMonth(startPast.getMonth() - 1);
+  const startPast = new Date(2026, 4, 1);
   const futureDays = 30;
 
   for (let d = new Date(startPast); d < today; d.setDate(d.getDate() + 1)) {
@@ -748,10 +735,7 @@ function render() {
           ontouchstart="startBadDrag(event, ${badPosition})"
           ontouchmove="moveBadDrag(event)"
           ontouchend="endBadDrag(event)">${habit.title}</div>
-        <div class="bad-status">
-          <div>Вы отказались ${count} ${dayWord(count)} назад</div>
-          <div>Вы нарушили 0 раз</div>
-        </div>
+        <div class="bad-status">Вы отказались ${count} ${dayWord(count)} назад</div>
       </div>
     `;
   });
@@ -1144,13 +1128,13 @@ function updateRefusalInfo() {
 
 function toggleQuitCalendar() {
   const calendar = document.getElementById("quitCalendar");
-  calendar.classList.toggle("open");
+  calendar.style.display = calendar.style.display === "block" ? "none" : "block";
   renderQuitCalendar();
 }
 
 function hideQuitCalendar() {
   const calendar = document.getElementById("quitCalendar");
-  if (calendar) calendar.classList.remove("open");
+  if (calendar) calendar.style.display = "none";
 }
 
 function changeCalendarMonth(delta) {
