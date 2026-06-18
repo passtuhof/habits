@@ -773,6 +773,24 @@ button.disabled-save {
   transition: none;
 }
 
+
+/* Интерактивная подсветка текста при перетаскивании тумблера */
+.toggle-two.drag-preview-no #violationsNoBtn {
+  color: #fff;
+}
+
+.toggle-two.drag-preview-no #violationsYesBtn {
+  color: #111;
+}
+
+.toggle-two.drag-preview-yes #violationsNoBtn {
+  color: #111;
+}
+
+.toggle-two.drag-preview-yes #violationsYesBtn {
+  color: #fff;
+}
+
 </style>
 </head>
 <body>
@@ -1160,6 +1178,28 @@ function confirmDeleteCurrentHabit() {
 }
 
 
+
+function updateViolationsTogglePreview(isYesPreview) {
+  const toggle = document.querySelector("#settingsModal .toggle-two");
+  const noBtn = document.getElementById("violationsNoBtn");
+  const yesBtn = document.getElementById("violationsYesBtn");
+
+  if (!toggle || !noBtn || !yesBtn) return;
+
+  toggle.classList.toggle("drag-preview-no", !isYesPreview);
+  toggle.classList.toggle("drag-preview-yes", isYesPreview);
+
+  noBtn.classList.toggle("active", !isYesPreview);
+  yesBtn.classList.toggle("active", isYesPreview);
+}
+
+function clearViolationsTogglePreview() {
+  const toggle = document.querySelector("#settingsModal .toggle-two");
+  if (!toggle) return;
+
+  toggle.classList.remove("drag-preview-no", "drag-preview-yes");
+}
+
 let violationsToggleDrag = {
   active: false,
   moved: false,
@@ -1180,6 +1220,7 @@ function initViolationsToggleDrag() {
     toggle.classList.add("dragging");
     toggle.setPointerCapture(event.pointerId);
     toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
+    updateViolationsTogglePreview(appSettings.showViolations);
   });
 
   toggle.addEventListener("pointermove", function(event) {
@@ -1191,8 +1232,10 @@ function initViolationsToggleDrag() {
     const rect = violationsToggleDrag.rect;
     const position = (event.clientX - rect.left) / rect.width;
     const shift = Math.max(0, Math.min(100, position * 200 - 50));
+    const isYesPreview = event.clientX >= rect.left + rect.width / 2;
 
     toggle.style.setProperty("--toggle-shift", shift + "%");
+    updateViolationsTogglePreview(isYesPreview);
   }, { passive: false });
 
   function finishDrag(event) {
@@ -1205,6 +1248,7 @@ function initViolationsToggleDrag() {
     violationsToggleDrag.rect = null;
 
     toggle.classList.remove("dragging");
+    clearViolationsTogglePreview();
 
     if (event.pointerId !== undefined) {
       try { toggle.releasePointerCapture(event.pointerId); } catch (e) {}
