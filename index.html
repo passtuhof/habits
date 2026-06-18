@@ -183,6 +183,92 @@ button {
   content: "✓";
 }
 
+.good-section-title {
+  width: 100%;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 10px 0 8px;
+  border-bottom: 1px solid #eee;
+  color: #111;
+}
+
+.quit-date-wrap {
+  position: relative;
+}
+
+#quitDateDisplay {
+  cursor: pointer;
+}
+
+.quit-calendar {
+  display: none;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  padding: 10px;
+  margin: -4px 0 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+
+.calendar-head button {
+  background: #eee;
+  color: #111;
+  padding: 6px 10px;
+  border-radius: 9px;
+}
+
+.calendar-head button:disabled {
+  opacity: 0.35;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #777;
+  padding: 4px 0;
+}
+
+.calendar-day {
+  text-align: center;
+  padding: 8px 0;
+  border-radius: 9px;
+  font-size: 14px;
+  background: #f3f3f3;
+  color: #111;
+}
+
+.calendar-day.selected {
+  background: #111;
+  color: #fff;
+  font-weight: 800;
+}
+
+.calendar-day.disabled {
+  color: #aaa;
+  background: #f7f7f7;
+  pointer-events: none;
+}
+
+.calendar-day.empty {
+  background: transparent;
+  pointer-events: none;
+}
+
 .bad-section {
   margin-top: 16px;
 }
@@ -360,6 +446,8 @@ textarea {
     <button onclick="openModal()">+</button>
   </div>
 
+  <div class="good-section-title" id="goodSectionTitle">Хорошие привычки</div>
+
   <div class="tracker" id="goodTracker">
     <div class="left-column">
       <div class="corner"></div>
@@ -404,7 +492,11 @@ textarea {
 
     <div id="badFields" style="display:none;">
       <div class="label">Дата отказа</div>
-      <input id="quitDate" type="date" onchange="updateRefusalInfo()">
+      <div class="quit-date-wrap">
+        <input id="quitDateDisplay" readonly onclick="toggleQuitCalendar()">
+        <input id="quitDate" type="hidden">
+        <div class="quit-calendar" id="quitCalendar"></div>
+      </div>
       <div class="refusal-info" id="refusalInfo"></div>
     </div>
 
@@ -445,6 +537,8 @@ let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")
 let editingIndex = null;
 let editingCategory = null;
 let currentHabitType = "good";
+let calendarViewDate = new Date();
+calendarViewDate.setHours(0, 0, 0, 0);
 
 let dragIndex = null;
 let dragColor = null;
@@ -537,11 +631,16 @@ function render() {
   const checksList = document.getElementById("checksList");
   const badList = document.getElementById("badList");
   const badSectionTitle = document.getElementById("badSectionTitle");
+  const goodSectionTitle = document.getElementById("goodSectionTitle");
 
   datesRow.innerHTML = "";
   leftList.innerHTML = "";
   checksList.innerHTML = "";
   badList.innerHTML = "";
+
+  const goodHabits = habits.filter(habit => isGoodHabit(habit));
+  goodSectionTitle.style.display = goodHabits.length ? "block" : "none";
+  document.getElementById("goodTracker").style.display = goodHabits.length ? "grid" : "none";
 
   dates.forEach(date => {
     datesRow.innerHTML += `
@@ -802,8 +901,7 @@ function openModal() {
   document.getElementById("habitDescription").style.height = "74px";
   document.getElementById("habitColor").value = "black";
   colorSelect(document.getElementById("habitColor"));
-  document.getElementById("quitDate").value = todayKey();
-  document.getElementById("quitDate").max = todayKey();
+  setQuitDateValue(todayKey());
   document.getElementById("deleteButton").style.display = "none";
 
   updateHabitTypeUI(false);
@@ -823,8 +921,7 @@ function editHabit(index) {
   document.getElementById("habitDescription").value = habits[index].description || "";
   document.getElementById("habitColor").value = habits[index].color || "black";
   colorSelect(document.getElementById("habitColor"));
-  document.getElementById("quitDate").value = habits[index].quitDate || todayKey();
-  document.getElementById("quitDate").max = todayKey();
+  setQuitDateValue(habits[index].quitDate || todayKey());
   document.getElementById("deleteButton").style.display = "block";
 
   updateHabitTypeUI(true);
@@ -945,8 +1042,99 @@ function colorSelect(select) {
 function updateRefusalInfo() {
   const quitDate = document.getElementById("quitDate").value || todayKey();
   const count = daysSince(quitDate);
-  document.getElementById("refusalInfo").textContent = `Вы отказались от привычки ${count} дней назад`;
+  document.getElementById("refusalInfo").textContent = `Вы отказались ${count} дней назад`;
 }
+
+
+function formatDisplayDate(dateKey) {
+  const [y, m, d] = dateKey.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+function setQuitDateValue(dateKey) {
+  const max = todayKey();
+  if (dateKey > max) dateKey = max;
+
+  document.getElementById("quitDate").value = dateKey;
+  document.getElementById("quitDateDisplay").value = formatDisplayDate(dateKey);
+
+  calendarViewDate = new Date(dateKey + "T00:00:00");
+  calendarViewDate.setDate(1);
+
+  renderQuitCalendar();
+  updateRefusalInfo();
+}
+
+function toggleQuitCalendar() {
+  const calendar = document.getElementById("quitCalendar");
+  calendar.style.display = calendar.style.display === "block" ? "none" : "block";
+  renderQuitCalendar();
+}
+
+function changeCalendarMonth(delta) {
+  calendarViewDate.setMonth(calendarViewDate.getMonth() + delta);
+  renderQuitCalendar();
+}
+
+function renderQuitCalendar() {
+  const calendar = document.getElementById("quitCalendar");
+  if (!calendar) return;
+
+  const selectedKey = document.getElementById("quitDate").value || todayKey();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const year = calendarViewDate.getFullYear();
+  const month = calendarViewDate.getMonth();
+  const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+
+  const nextMonth = new Date(year, month + 1, 1);
+  const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const nextDisabled = nextMonth > currentMonth;
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+
+  let html = `
+    <div class="calendar-head">
+      <button type="button" onclick="changeCalendarMonth(-1)">‹</button>
+      <div>${monthNames[month]} ${year}</div>
+      <button type="button" onclick="changeCalendarMonth(1)" ${nextDisabled ? "disabled" : ""}>›</button>
+    </div>
+    <div class="calendar-grid">
+      <div class="calendar-weekday">Пн</div>
+      <div class="calendar-weekday">Вт</div>
+      <div class="calendar-weekday">Ср</div>
+      <div class="calendar-weekday">Чт</div>
+      <div class="calendar-weekday">Пт</div>
+      <div class="calendar-weekday">Сб</div>
+      <div class="calendar-weekday">Вс</div>
+  `;
+
+  for (let i = 0; i < startOffset; i++) {
+    html += `<div class="calendar-day empty"></div>`;
+  }
+
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const date = new Date(year, month, day);
+    date.setHours(0, 0, 0, 0);
+    const key = toDateKey(date);
+    const disabled = date > today;
+    const selected = key === selectedKey;
+
+    html += `
+      <div class="calendar-day ${disabled ? "disabled" : ""} ${selected ? "selected" : ""}"
+        onclick="setQuitDateValue('${key}'); document.getElementById('quitCalendar').style.display='none';">
+        ${day}
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  calendar.innerHTML = html;
+}
+
 
 render();
 </script>
