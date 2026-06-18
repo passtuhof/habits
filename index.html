@@ -505,6 +505,16 @@ textarea {
 #categoryColor option[value="yellow"] { color: #ffcc00; }
 #categoryColor option[value="black"] { color: #111111; }
 
+
+.calendar-modal-content {
+  max-width: 360px;
+  width: 100%;
+}
+
+.calendar-modal-content #quitCalendar {
+  width: 100%;
+}
+
 </style>
 </head>
 <body>
@@ -567,7 +577,6 @@ textarea {
       <div class="quit-date-wrap">
         <input id="quitDateDisplay" readonly onclick="toggleQuitCalendar()">
         <input id="quitDate" type="hidden">
-        <div id="quitCalendar" class="quit-calendar"></div>
       </div>
       <div class="refusal-info" id="refusalInfo"></div>
       <div class="violations-row" id="violationsRow">
@@ -583,6 +592,12 @@ textarea {
       <button class="cancel" onclick="closeModal()">Отмена</button>
       <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="quitCalendarModal">
+  <div class="modal-content calendar-modal-content">
+    <div id="quitCalendar"></div>
   </div>
 </div>
 
@@ -1351,14 +1366,12 @@ function updateRefusalInfo() {
 }
 
 function toggleQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  calendar.classList.toggle("open");
   renderQuitCalendar();
+  showModal("quitCalendarModal");
 }
 
 function hideQuitCalendar() {
-  const calendar = document.getElementById("quitCalendar");
-  if (calendar) calendar.classList.remove("open");
+  hideModal("quitCalendarModal");
 }
 
 function changeCalendarMonth(delta) {
@@ -1461,10 +1474,10 @@ function handleCategorySelect(sel){
 }
 
 function openNewCategoryModal(){
- document.getElementById('newCategoryModal').style.display='flex';
+ showModal("newCategoryModal");
 }
 function closeNewCategoryModal(){
- document.getElementById('newCategoryModal').style.display='none';
+ hideModal("newCategoryModal");
 }
 function saveNewCategory(){
  const name=document.getElementById('newCategoryName').value.trim();
@@ -1483,50 +1496,3 @@ render();
 </script>
 </body>
 </html>
-
-<style>
-#quitCalendar.open,
-#categoryPicker.open,
-#colorPicker.open{
-  position: fixed !important;
-  inset: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: rgba(0,0,0,.35) !important;
-  z-index: 9999 !important;
-}
-
-#quitCalendar.open > *,
-#categoryPicker.open > *,
-#colorPicker.open > *{
-  max-width: 360px;
-  width: calc(100% - 32px);
-}
-</style>
-
-<style>
-#quitCalendar.open{
-  position:fixed !important;
-  inset:0 !important;
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  background:rgba(0,0,0,.35) !important;
-  z-index:99999 !important;
-}
-
-#quitCalendar .quit-calendar-content,
-#quitCalendar .calendar-content,
-#quitCalendar > div{
-  position:relative !important;
-  top:auto !important;
-  left:auto !important;
-  transform:none !important;
-  width:min(360px, calc(100vw - 32px)) !important;
-  max-width:360px !important;
-  margin:0 auto !important;
-}
-</style>
