@@ -91,7 +91,7 @@ button {
   gap: 4px;
   border-bottom: 1px solid #eee;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
   touch-action: none;
 }
 
@@ -529,12 +529,10 @@ textarea {
 
     <div id="goodFields">
       <div class="label">Категория</div>
-      <select id="habitColor" onchange="colorSelect(this)">
-        <option value="black" style="color:#111111;font-weight:700;">Нет</option>
-        <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
-        <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
-        <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
-      </select>
+      <input id="habitColorDisplay" readonly value="Нет" onclick="openCategoryPickerModal()"><div id="categoryPickerModal" class="quit-calendar"></div><!--
+        <option value="black">Нет</option>
+        <option value="add_category">➕ Добавить</option>
+      -->
     </div>
 
     <div id="badFields" style="display:none;">
@@ -557,6 +555,24 @@ textarea {
       <button onclick="saveHabit()">Сохранить</button>
       <button class="cancel" onclick="closeModal()">Отмена</button>
       <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="newCategoryModal">
+  <div class="modal-content">
+    <h2>Новая категория</h2>
+    <div class="label">Название категории</div>
+    <input id="newCategoryName" placeholder="Название категории">
+    <div class="label">Цвет категории</div>
+    <input id="newCategoryColorDisplay" readonly value="Красный" onclick="openColorPickerModal()">
+
+<div id="colorPickerModal" class="quit-calendar">
+</div>
+    <div class="buttons">
+      <button onclick="saveNewCategory()">Сохранить</button>
+      <button class="cancel" onclick="closeNewCategoryModal()">Отмена</button>
     </div>
   </div>
 </div>
@@ -810,7 +826,49 @@ function toggleCategory(event, colorKey) {
   event.stopPropagation();
   collapsedCategories[colorKey] = !collapsedCategories[colorKey];
   save();
-  render();
+  
+function renderCategoryPicker(){
+ const box=document.getElementById('categoryPickerModal');
+ if(!box) return;
+ let h='<div class="calendar-head"><div>Категории</div></div><div>';
+ h+='<div class="calendar-day" onclick="pickCategory(\'black\',\'Нет\')">Нет</div>';
+ customCategories.forEach(c=>{
+  h+=`<div class="calendar-day" onclick="pickCategory('${c.id}','${c.name}')">${c.name}</div>`;
+ });
+ h+='<div class="calendar-day" onclick="openNewCategoryModal()">➕ Добавить</div></div>';
+ box.innerHTML=h;
+}
+function openCategoryPickerModal(){
+ renderCategoryPicker();
+ document.getElementById('categoryPickerModal').classList.toggle('open');
+}
+function pickCategory(id,name){
+ const d=document.getElementById('habitColorDisplay');
+ d.dataset.value=id;
+ d.value=name;
+ document.getElementById('categoryPickerModal').classList.remove('open');
+}
+
+function renderColorPicker(){
+ const box=document.getElementById('colorPickerModal');
+ if(!box) return;
+ box.innerHTML=`<div class="calendar-head"><div>Цвет</div></div>
+ <div class="calendar-day" onclick="pickColor('red','Красный')">Красный</div>
+ <div class="calendar-day" onclick="pickColor('blue','Синий')">Синий</div>
+ <div class="calendar-day" onclick="pickColor('green','Зелёный')">Зелёный</div>
+ <div class="calendar-day" onclick="pickColor('yellow','Жёлтый')">Жёлтый</div>`;
+}
+function openColorPickerModal(){
+ renderColorPicker();
+ document.getElementById('colorPickerModal').classList.toggle('open');
+}
+function pickColor(v,t){
+ document.getElementById('newCategoryColorDisplay').value=t;
+ document.getElementById('newCategoryColorDisplay').dataset.value=v;
+ document.getElementById('colorPickerModal').classList.remove('open');
+}
+
+render();
 }
 
 function startCategoryDrag(event, index) {
@@ -1275,6 +1333,48 @@ function changeViolations(delta) {
   const current = Number(document.getElementById("violationCount").textContent) || 0;
   setViolationsValue(current + delta);
 }
+
+
+let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [];
+
+function refreshCategorySelect(){
+ const s=document.getElementById('habitColor');
+ if(!s) return;
+ const cur=s.value;
+ s.innerHTML='<option value="black">Нет</option>';
+ customCategories.forEach(c=>{
+   const o=document.createElement('option');
+   o.value=c.id;o.textContent=c.name;o.style.color=c.color;
+   s.appendChild(o);
+ });
+ const a=document.createElement('option');
+ a.value='add_category';a.textContent='➕ Добавить';
+ s.appendChild(a);
+ if(cur && cur!=='add_category') s.value=cur;
+}
+
+function handleCategorySelect(sel){
+ if(sel.value==='add_category'){openNewCategoryModal(); sel.value='black';}
+}
+
+function openNewCategoryModal(){
+ document.getElementById('newCategoryModal').style.display='flex';
+}
+function closeNewCategoryModal(){
+ document.getElementById('newCategoryModal').style.display='none';
+}
+function saveNewCategory(){
+ const name=document.getElementById('newCategoryName').value.trim();
+ const color=document.getElementById('newCategoryColor').value;
+ if(!name) return;
+ const cat={id:'cat_'+Date.now(),name,color};
+ customCategories.push(cat);
+ localStorage.setItem('customCategories',JSON.stringify(customCategories));
+ refreshCategorySelect();
+ document.getElementById('habitColor').value=cat.id;
+ closeNewCategoryModal();
+}
+refreshCategorySelect();
 
 render();
 </script>
