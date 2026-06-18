@@ -54,7 +54,7 @@ button {
 
 .corner {
   height: 38px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .category-left {
@@ -140,7 +140,7 @@ button {
   grid-template-columns: repeat(var(--days-count), var(--day-width));
   gap: 3px;
   height: 38px;
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .day {
@@ -188,6 +188,7 @@ button {
   font-size: 15px;
   font-weight: 800;
   padding: 10px 0 8px;
+  margin-bottom: 6px;
   border-bottom: 1px solid #eee;
   color: #111;
 }
@@ -202,12 +203,17 @@ button {
 
 .quit-calendar {
   display: none;
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 14px;
   padding: 10px;
-  margin: -4px 0 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
+  margin: 0;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
 }
 
 .calendar-head {
@@ -279,6 +285,7 @@ button {
   font-size: 15px;
   font-weight: 800;
   padding: 10px 0 8px;
+  margin-bottom: 6px;
   border-bottom: 1px solid #eee;
   color: #111;
   white-space: normal;
@@ -331,7 +338,7 @@ button {
   width: 100%;
   max-width: 360px;
   max-height: calc(100vh - 32px);
-  overflow-y: auto;
+  overflow: visible;
   box-sizing: border-box;
 }
 
@@ -580,6 +587,16 @@ function daysSince(dateKey) {
   return Math.max(0, Math.floor(diff / 86400000));
 }
 
+function dayWord(count) {
+  const lastTwo = count % 100;
+  const lastOne = count % 10;
+
+  if (lastTwo >= 11 && lastTwo <= 14) return "дней";
+  if (lastOne === 1) return "день";
+  if (lastOne >= 2 && lastOne <= 4) return "дня";
+  return "дней";
+}
+
 function getDates() {
   const days = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
   const result = [];
@@ -720,7 +737,7 @@ function render() {
     badList.innerHTML += `
       <div class="bad-habit-row">
         <div class="bad-habit-name" onclick="editHabit(${realIndex})">${habit.title}</div>
-        <div class="bad-status">Вы отказались ${count} дней назад</div>
+        <div class="bad-status">Вы отказались ${count} ${dayWord(count)} назад</div>
       </div>
     `;
   });
@@ -995,6 +1012,7 @@ function deleteCurrentHabit() {
 
 function closeModal() {
   document.getElementById("modal").style.display = "none";
+  document.getElementById("quitCalendar").style.display = "none";
   editingIndex = null;
 }
 
@@ -1042,7 +1060,7 @@ function colorSelect(select) {
 function updateRefusalInfo() {
   const quitDate = document.getElementById("quitDate").value || todayKey();
   const count = daysSince(quitDate);
-  document.getElementById("refusalInfo").textContent = `Вы отказались ${count} дней назад`;
+  document.getElementById("refusalInfo").textContent = `Вы отказались ${count} ${dayWord(count)} назад`;
 }
 
 
