@@ -61,7 +61,11 @@ button {
   margin-bottom: 10px;
 }
 
-.good-title-main { display: none; }
+.good-title-main {
+  display: none;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
 
 .tracker {
   display: grid;
@@ -71,7 +75,7 @@ button {
 }
 
 .corner {
-  height: 38px;
+  height: 24px;
   margin-bottom: 0;
 }
 
@@ -160,7 +164,7 @@ button {
 }
 
 .dates-row {
-  height: 38px;
+  height: 24px;
   margin-bottom: 0;
 }
 
@@ -211,7 +215,7 @@ button {
 .bad-habit-row {
   min-height: var(--row-height);
   display: grid;
-  grid-template-columns: var(--left-width) 1fr;
+  grid-template-columns: minmax(0, 1fr) 190px;
   gap: 8px;
   align-items: center;
   border-bottom: 1px solid #eee;
@@ -233,9 +237,11 @@ button {
 
 .bad-status {
   text-align: right;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #111;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .modal {
@@ -319,14 +325,16 @@ textarea {
 }
 
 .quit-date-wrap { position: relative; }
-#quitDateDisplay { cursor: pointer; }
+#quitDateDisplay {
+  cursor: pointer;
+}
 
 .quit-calendar {
-  display: none;
+  display: block;
   position: fixed;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -46%) scale(0.96);
   width: min(320px, calc(100vw - 48px));
   z-index: 60;
   background: #fff;
@@ -334,6 +342,17 @@ textarea {
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0.32s ease;
+}
+
+.quit-calendar.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .calendar-head {
@@ -396,8 +415,41 @@ textarea {
 .refusal-info {
   font-size: 13px;
   font-weight: 700;
-  margin: -2px 0 12px;
+  margin: -2px 0 8px;
   color: #111;
+}
+
+.violations-row {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.violation-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.violation-btn:disabled {
+  background: #ddd;
+  color: #999;
+}
+
+.violation-count {
+  min-width: 24px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .buttons {
@@ -499,7 +551,6 @@ textarea {
         <span class="violation-count" id="violationCount">0</span>
         <button type="button" class="violation-btn" onclick="changeViolations(1)">+</button>
       </div>
-
     </div>
 
     <div class="buttons">
@@ -558,6 +609,7 @@ function normalizeHabits() {
   habits = habits.map(habit => {
     if (!habit.type) habit.type = "good";
     if (habit.type === "bad" && !habit.quitDate) habit.quitDate = todayKey();
+    if (habit.type === "bad" && habit.violations === undefined) habit.violations = 0;
     return habit;
   });
 }
@@ -605,7 +657,8 @@ function getDates() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const startPast = new Date(2026, 4, 1);
+  const startPast = new Date(today);
+  startPast.setMonth(startPast.getMonth() - 1);
   const futureDays = 30;
 
   for (let d = new Date(startPast); d < today; d.setDate(d.getDate() + 1)) {
@@ -735,7 +788,10 @@ function render() {
           ontouchstart="startBadDrag(event, ${badPosition})"
           ontouchmove="moveBadDrag(event)"
           ontouchend="endBadDrag(event)">${habit.title}</div>
-        <div class="bad-status">Вы отказались ${count} ${dayWord(count)} назад</div>
+        <div class="bad-status">
+          <div>Вы отказались ${count} ${dayWord(count)} назад</div>
+          <div>Вы нарушили ${habit.violations || 0} раз</div>
+        </div>
       </div>
     `;
   });
@@ -956,6 +1012,8 @@ function openModal() {
   document.getElementById("habitColor").value = "black";
   colorSelect(document.getElementById("habitColor"));
   setQuitDateValue(todayKey());
+  setViolationsValue(0);
+  document.getElementById("violationsRow").style.display = "none";
   document.getElementById("deleteButton").style.display = "none";
 
   updateHabitTypeUI(false);
@@ -977,6 +1035,8 @@ function editHabit(index) {
   document.getElementById("habitColor").value = habits[index].color || "black";
   colorSelect(document.getElementById("habitColor"));
   setQuitDateValue(habits[index].quitDate || todayKey());
+  setViolationsValue(habits[index].violations || 0);
+  document.getElementById("violationsRow").style.display = currentHabitType === "bad" ? "flex" : "none";
   document.getElementById("deleteButton").style.display = "block";
 
   updateHabitTypeUI(true);
@@ -994,6 +1054,7 @@ function saveHabit() {
   const description = document.getElementById("habitDescription").value.trim();
   const color = document.getElementById("habitColor").value;
   const quitDate = document.getElementById("quitDate").value || todayKey();
+  const violations = Number(document.getElementById("violationCount").textContent) || 0;
 
   if (!title) return;
 
@@ -1008,6 +1069,7 @@ function saveHabit() {
     } else {
       habits[editingIndex].type = "bad";
       habits[editingIndex].quitDate = quitDate;
+      habits[editingIndex].violations = violations;
       habits[editingIndex].color = "black";
       delete habits[editingIndex].done;
     }
@@ -1028,7 +1090,8 @@ function saveHabit() {
         title,
         description,
         color: "black",
-        quitDate
+        quitDate,
+        violations: 0
       });
     }
   }
@@ -1128,13 +1191,13 @@ function updateRefusalInfo() {
 
 function toggleQuitCalendar() {
   const calendar = document.getElementById("quitCalendar");
-  calendar.style.display = calendar.style.display === "block" ? "none" : "block";
+  calendar.classList.toggle("open");
   renderQuitCalendar();
 }
 
 function hideQuitCalendar() {
   const calendar = document.getElementById("quitCalendar");
-  if (calendar) calendar.style.display = "none";
+  if (calendar) calendar.classList.remove("open");
 }
 
 function changeCalendarMonth(delta) {
@@ -1196,6 +1259,21 @@ function renderQuitCalendar() {
 
   html += `</div>`;
   calendar.innerHTML = html;
+}
+
+
+function setViolationsValue(value) {
+  const count = Math.max(0, Number(value) || 0);
+  const countEl = document.getElementById("violationCount");
+  const minusBtn = document.getElementById("violationMinus");
+
+  if (countEl) countEl.textContent = count;
+  if (minusBtn) minusBtn.disabled = count <= 0;
+}
+
+function changeViolations(delta) {
+  const current = Number(document.getElementById("violationCount").textContent) || 0;
+  setViolationsValue(current + delta);
 }
 
 render();
