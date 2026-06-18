@@ -515,6 +515,32 @@ textarea {
   width: 100%;
 }
 
+
+.calendar-modal-content {
+  position: relative;
+}
+
+.calendar-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #777;
+  font-size: 26px;
+  line-height: 1;
+  padding: 0;
+  border-radius: 50%;
+  z-index: 5;
+}
+
+.calendar-close-btn:active {
+  background: #eee;
+  color: #111;
+}
+
 </style>
 </head>
 <body>
@@ -597,6 +623,7 @@ textarea {
 
 <div class="modal" id="quitCalendarModal">
   <div class="modal-content calendar-modal-content">
+    <button type="button" class="calendar-close-btn" onclick="hideQuitCalendar()">×</button>
     <div id="quitCalendar"></div>
   </div>
 </div>
