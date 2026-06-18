@@ -85,30 +85,18 @@ button {
 
 .category-left {
   height: 34px;
+  width: calc(var(--left-width) + 8px + var(--seven-days-width));
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   border-bottom: 1px solid #eee;
+  background: #fff;
   font-size: 15px;
   font-weight: 400;
   touch-action: none;
   text-align: center;
-}
-
-.category-title{
-  flex: 1;
-  text-align: center;
-  padding: 0 28px;
-}
-
-.category-arrow{
-  position:absolute;
-  right:8px;
-  top:50%;
-  transform:translateY(-50%);
-  font-size:12px;
-  line-height:1;
+  z-index: 2;
 }
 
 .category-left.dragging,
@@ -121,14 +109,24 @@ button {
 }
 
 .category-title {
+  width: 100%;
+  padding: 0 34px;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .category-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 12px;
+  line-height: 1;
   flex-shrink: 0;
+  padding: 8px;
+  z-index: 3;
 }
 
 .category-spacer {
@@ -894,6 +892,14 @@ button.disabled-save {
 .top-actions button svg {
   display: block;
   flex-shrink: 0;
+}
+
+
+@media (orientation: landscape) {
+  .category-left {
+    width: calc(100vw - 28px);
+    max-width: calc(100vw - 28px);
+  }
 }
 
 </style>
