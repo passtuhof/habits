@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Привычки</title>
 <style>
 :root {
@@ -654,6 +654,58 @@ border-radius:50%;
 }
 
 
+html,
+body {
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+.app {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Оставляем рабочими поля ввода и горизонтальную прокрутку календаря */
+input,
+textarea,
+.picker-field,
+.right-scroll {
+  touch-action: auto;
+}
+
+
+@media (orientation: landscape) {
+  .app{
+    max-width:none;
+    width:100%;
+  }
+
+  .tracker{
+    grid-template-columns: minmax(220px, 30%) 1fr;
+    width:100%;
+  }
+
+  .right-scroll{
+    width:100%;
+  }
+
+  .right-inner{
+    min-width:max-content;
+  }
+}
+
+
 /* Плавный тумблер настроек */
 .toggle-two {
   position: relative;
@@ -1181,16 +1233,16 @@ function updateNewCategorySaveButton() {
 }
 
 function getSortableCategoryOrder() {
-  const existing = customCategories.map(cat => cat.id);
+  const existingIds = customCategories.map(cat => cat.id);
   const saved = Array.isArray(categoryOrder) ? categoryOrder : [];
-  const merged = saved.filter(id => id !== "black" && existing.includes(id));
+  const sortable = saved.filter(id => id !== "black" && existingIds.includes(id));
 
-  existing.forEach(id => {
-    if (!merged.includes(id)) merged.push(id);
+  existingIds.forEach(id => {
+    if (!sortable.includes(id)) sortable.push(id);
   });
 
-  categoryOrder = ["black", ...merged];
-  return merged;
+  categoryOrder = ["black", ...sortable];
+  return sortable;
 }
 
 function getCategorySortIndex(categoryId) {
@@ -1236,6 +1288,13 @@ function daysSince(dateKey) {
   today.setHours(0, 0, 0, 0);
   const diff = today - start;
   return Math.max(0, Math.floor(diff / 86400000));
+}
+
+function violationWord(n) {
+  n = Math.abs(Number(n)) || 0;
+  if (n % 10 === 1 && n % 100 !== 11) return "раз";
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return "раза";
+  return "раз";
 }
 
 function dayWord(n) {
@@ -1412,7 +1471,7 @@ function render() {
           ontouchend="endBadDrag(event)">${habit.title}</div>
         <div class="bad-status">
           <div>Вы отказались ${count} ${dayWord(count)} назад</div>
-          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} раз</div>` : ""}
+          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} ${violationWord(habit.violations || 0)}</div>` : ""}
         </div>
       </div>
     `;
@@ -1993,5 +2052,56 @@ updateHabitSaveButton();
 
 render();
 </script>
+
+<script>
+(function () {
+  // Запрет pinch-zoom двумя пальцами
+  document.addEventListener("touchmove", function (event) {
+    if (event.touches && event.touches.length > 1) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  // Запрет жестов масштабирования в iOS Safari
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (eventName) {
+    document.addEventListener(eventName, function (event) {
+      event.preventDefault();
+    }, { passive: false });
+  });
+
+  // Запрет двойного тапа для приближения
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", function (event) {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  // Запрет обновления страницы свайпом вниз сверху
+  let startY = 0;
+
+  document.addEventListener("touchstart", function (event) {
+    if (event.touches && event.touches.length === 1) {
+      startY = event.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener("touchmove", function (event) {
+    if (!event.touches || event.touches.length !== 1) return;
+
+    const app = document.querySelector(".app");
+    const currentY = event.touches[0].clientY;
+    const pullingDown = currentY > startY;
+    const appAtTop = !app || app.scrollTop <= 0;
+
+    if (appAtTop && pullingDown) {
+      event.preventDefault();
+    }
+  }, { passive: false });
+})();
+</script>
+
 </body>
 </html>
