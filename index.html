@@ -920,6 +920,69 @@ button.disabled-save {
   display: inline-block;
 }
 
+
+/* Карточки привычек */
+:root {
+  --row-height: 56px;
+  --card-gap-y: 8px;
+}
+
+.habit-left,
+.check-row,
+.bad-habit-row {
+  background: #f7f7f7;
+  border: 1px solid #eeeeee;
+  border-radius: 14px;
+  margin-bottom: var(--card-gap-y);
+  min-height: var(--row-height);
+  height: var(--row-height);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+
+.habit-left {
+  padding: 0 10px;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.check-row {
+  border-bottom: 1px solid #eeeeee;
+}
+
+.bad-habit-row {
+  padding: 8px 10px;
+}
+
+.category-spacer {
+  border-bottom: none;
+  margin-bottom: var(--card-gap-y);
+}
+
+.habit-left.dragging,
+.bad-habit-row.dragging,
+.category-left.dragging {
+  transform: scale(1.035);
+  background: #eeeeee;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  opacity: 0.92;
+  z-index: 10;
+}
+
+.name-wrap,
+.bad-habit-name {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.habit-name,
+.bad-habit-name {
+  font-size: 14px;
+}
+
+.cell {
+  background: #ffffff;
+}
+
 </style>
 </head>
 <body>
@@ -1149,6 +1212,13 @@ let dragColor = null;
 let dragBadIndex = null;
 let dragCategoryIndex = null;
 let startY = 0;
+
+let dragPressTimer = null;
+let pendingDragIndex = null;
+let pendingBadDragIndex = null;
+let dragStartY = 0;
+let dragActivated = false;
+let suppressClickUntil = 0;
 
 let calendarViewDate = new Date();
 calendarViewDate.setHours(0, 0, 0, 0);
@@ -1994,26 +2064,47 @@ function endCategoryDrag() {
 
 function startDrag(event, index) {
   if (!isGoodHabit(habits[index])) return;
-  dragIndex = index;
+
+  pendingDragIndex = index;
+  dragIndex = null;
   dragColor = habits[index].color;
-  startY = event.touches[0].clientY;
-  const row = document.querySelector(`[data-index="${index}"]`);
-  if (row) row.classList.add("dragging");
+  dragActivated = false;
+  dragStartY = event.touches[0].clientY;
+  startY = dragStartY;
+
+  clearTimeout(dragPressTimer);
+  dragPressTimer = setTimeout(() => {
+    dragIndex = pendingDragIndex;
+    dragActivated = true;
+    const row = document.querySelector(`[data-index="${dragIndex}"]`);
+    if (row) row.classList.add("dragging");
+    if (navigator.vibrate) navigator.vibrate(12);
+  }, 180);
 }
 
 function moveDrag(event) {
+  const currentY = event.touches[0].clientY;
+
+  if (!dragActivated) {
+    if (Math.abs(currentY - dragStartY) > 10) {
+      clearTimeout(dragPressTimer);
+      pendingDragIndex = null;
+      dragColor = null;
+    }
+    return;
+  }
+
   event.preventDefault();
   if (dragIndex === null) return;
 
-  const currentY = event.touches[0].clientY;
   const diff = currentY - startY;
 
-  if (diff > 42) {
+  if (diff > 48) {
     moveWithinCategory(1);
     startY = currentY;
   }
 
-  if (diff < -42) {
+  if (diff < -48) {
     moveWithinCategory(-1);
     startY = currentY;
   }
@@ -2043,31 +2134,58 @@ function moveWithinCategory(direction) {
 }
 
 function endDrag() {
+  clearTimeout(dragPressTimer);
+
+  if (dragActivated) {
+    suppressClickUntil = Date.now() + 350;
+  }
+
   dragIndex = null;
+  pendingDragIndex = null;
   dragColor = null;
+  dragActivated = false;
   document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("dragging"));
 }
 
 function startBadDrag(event, badPosition) {
-  dragBadIndex = badPosition;
-  startY = event.touches[0].clientY;
-  const row = document.querySelector(`[data-bad-index="${badPosition}"]`);
-  if (row) row.classList.add("dragging");
+  pendingBadDragIndex = badPosition;
+  dragBadIndex = null;
+  dragActivated = false;
+  dragStartY = event.touches[0].clientY;
+  startY = dragStartY;
+
+  clearTimeout(dragPressTimer);
+  dragPressTimer = setTimeout(() => {
+    dragBadIndex = pendingBadDragIndex;
+    dragActivated = true;
+    const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+    if (row) row.classList.add("dragging");
+    if (navigator.vibrate) navigator.vibrate(12);
+  }, 180);
 }
 
 function moveBadDrag(event) {
+  const currentY = event.touches[0].clientY;
+
+  if (!dragActivated) {
+    if (Math.abs(currentY - dragStartY) > 10) {
+      clearTimeout(dragPressTimer);
+      pendingBadDragIndex = null;
+    }
+    return;
+  }
+
   event.preventDefault();
   if (dragBadIndex === null) return;
 
-  const currentY = event.touches[0].clientY;
   const diff = currentY - startY;
 
-  if (diff > 42) {
+  if (diff > 48) {
     moveBadHabit(1);
     startY = currentY;
   }
 
-  if (diff < -42) {
+  if (diff < -48) {
     moveBadHabit(-1);
     startY = currentY;
   }
@@ -2097,11 +2215,20 @@ function moveBadHabit(direction) {
 }
 
 function endBadDrag() {
+  clearTimeout(dragPressTimer);
+
+  if (dragActivated) {
+    suppressClickUntil = Date.now() + 350;
+  }
+
   dragBadIndex = null;
+  pendingBadDragIndex = null;
+  dragActivated = false;
   document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("dragging"));
 }
 
 function toggleHabit(habitIndex, dateKey) {
+  if (Date.now() < suppressClickUntil || dragActivated) return;
   if (!isGoodHabit(habits[habitIndex])) return;
 
   if (!habits[habitIndex].done) habits[habitIndex].done = {};
@@ -2172,7 +2299,8 @@ function openModal() {
 
 function editHabit(index) {
   initHabitTypeToggleDrag();
-  if (dragIndex !== null || dragBadIndex !== null) return;
+  if (Date.now() < suppressClickUntil) return;
+  if (dragIndex !== null || dragBadIndex !== null || dragActivated) return;
 
   editingIndex = index;
   currentHabitType = habits[index].type === "bad" ? "bad" : "good";
