@@ -1813,6 +1813,22 @@ function getCategoryRenderColor(category) {
   return colorMap[category.color] || colorMap.black;
 }
 
+
+function scrollCalendarToToday(force = false) {
+  const scroll = document.getElementById("rightScroll");
+  if (!scroll) return;
+
+  const { todayIndex } = getDates();
+  const styles = getComputedStyle(document.documentElement);
+  const dayWidth = parseInt(styles.getPropertyValue("--day-width")) || 33;
+  const gap = parseInt(styles.getPropertyValue("--gap")) || 3;
+
+  if (force || !window.initialScrollDone) {
+    scroll.scrollLeft = todayIndex * (dayWidth + gap);
+    window.initialScrollDone = true;
+  }
+}
+
 function render() {
   const { result: dates, todayIndex } = getDates();
 
@@ -1919,12 +1935,7 @@ function render() {
   });
 
   setTimeout(() => {
-    const scroll = document.getElementById("rightScroll");
-    if (!window.initialScrollDone) {
-      const dayWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--day-width"));
-      scroll.scrollLeft = todayIndex * (dayWidth + 3);
-      window.initialScrollDone = true;
-    }
+    scrollCalendarToToday(false);
   }, 0);
 }
 
@@ -2237,9 +2248,22 @@ function saveHabit() {
     }
   }
 
+  const shouldScrollToToday = editingIndex === null && currentHabitType === "good";
+
   save();
   closeModal();
+
+  if (shouldScrollToToday) {
+    window.initialScrollDone = false;
+  }
+
   render();
+
+  if (shouldScrollToToday) {
+    setTimeout(() => {
+      scrollCalendarToToday(true);
+    }, 0);
+  }
 }
 
 function deleteCurrentHabit() {
