@@ -2510,6 +2510,15 @@ function changeViolations(delta) {
 
 let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [];
 
+if (customCategories.length === 0) {
+  customCategories = [
+    { id: "default_morning", name: "Утро", color: "yellow" },
+    { id: "default_day", name: "День", color: "green" },
+    { id: "default_evening", name: "Вечер", color: "blue" }
+  ];
+  localStorage.setItem("customCategories", JSON.stringify(customCategories));
+}
+
 function refreshCategorySelect(){
  const s=document.getElementById('habitColor');
  if(!s) return;
