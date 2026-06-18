@@ -684,6 +684,27 @@ textarea,
   touch-action: auto;
 }
 
+
+@media (orientation: landscape) {
+  .app{
+    max-width:none;
+    width:100%;
+  }
+
+  .tracker{
+    grid-template-columns: minmax(220px, 30%) 1fr;
+    width:100%;
+  }
+
+  .right-scroll{
+    width:100%;
+  }
+
+  .right-inner{
+    min-width:max-content;
+  }
+}
+
 </style>
 </head>
 <body>
