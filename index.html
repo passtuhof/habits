@@ -1250,6 +1250,15 @@ function confirmDeleteCurrentHabit() {
 
 
 
+
+function setViolationsDragPreview(isYesPreview) {
+  if (appSettings.showViolations !== isYesPreview) {
+    appSettings.showViolations = isYesPreview;
+    updateViolationsVisibility();
+    render();
+  }
+}
+
 function updateViolationsTogglePreview(isYesPreview) {
   const toggle = document.querySelector("#settingsModal .toggle-two");
   const noBtn = document.getElementById("violationsNoBtn");
@@ -1307,6 +1316,7 @@ function initViolationsToggleDrag() {
 
     toggle.style.setProperty("--toggle-shift", shift + "%");
     updateViolationsTogglePreview(isYesPreview);
+    setViolationsDragPreview(isYesPreview);
   }, { passive: false });
 
   function finishDrag(event) {
@@ -1329,6 +1339,8 @@ function initViolationsToggleDrag() {
       setViolationsSetting(shouldBeYes);
     } else {
       updateSettingsUI();
+      updateViolationsVisibility();
+      render();
     }
 
     violationsToggleDrag.moved = false;
