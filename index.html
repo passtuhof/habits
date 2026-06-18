@@ -626,6 +626,33 @@ border-radius:50%;
   line-height:1.25;
 }
 
+
+/* Вложенные модалки поверх основного окна редактирования */
+#categoryPickerModal,
+#colorPickerModal,
+#deleteHabitConfirmModal {
+  z-index: 120;
+}
+
+#categoryPickerModal .modal-content,
+#colorPickerModal .modal-content,
+#deleteHabitConfirmModal .modal-content {
+  z-index: 121;
+}
+
+/* Остальные дополнительные модалки, которые тоже могут открываться поверх других */
+#newCategoryModal,
+#quitCalendarModal,
+#categoryDeleteChoiceModal {
+  z-index: 110;
+}
+
+#newCategoryModal .modal-content,
+#quitCalendarModal .modal-content,
+#categoryDeleteChoiceModal .modal-content {
+  z-index: 111;
+}
+
 </style>
 </head>
 <body>
@@ -769,8 +796,8 @@ border-radius:50%;
     <div class="label">Название</div>
     <input id="newCategoryName" placeholder="Название категории">
     <div class="label">Цвет</div>
-    <input id="newCategoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('newCategoryColor')" value="Красный">
-    <input id="newCategoryColor" type="hidden" value="red">
+    <input id="newCategoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('newCategoryColor')" value="Чёрный">
+    <input id="newCategoryColor" type="hidden" value="black">
     <div class="buttons">
       <button onclick="saveNewCategory()">Сохранить</button>
     </div>
@@ -1810,7 +1837,7 @@ function saveNewCategory(){
  closeNewCategoryModal();
 }
 refreshCategorySelect();
-setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "red");
+setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "black");
 setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
 
