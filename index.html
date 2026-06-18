@@ -626,6 +626,33 @@ border-radius:50%;
   line-height:1.25;
 }
 
+
+/* Вложенные модалки поверх основного окна редактирования */
+#categoryPickerModal,
+#colorPickerModal,
+#deleteHabitConfirmModal {
+  z-index: 120;
+}
+
+#categoryPickerModal .modal-content,
+#colorPickerModal .modal-content,
+#deleteHabitConfirmModal .modal-content {
+  z-index: 121;
+}
+
+/* Остальные дополнительные модалки, которые тоже могут открываться поверх других */
+#newCategoryModal,
+#quitCalendarModal,
+#categoryDeleteChoiceModal {
+  z-index: 110;
+}
+
+#newCategoryModal .modal-content,
+#quitCalendarModal .modal-content,
+#categoryDeleteChoiceModal .modal-content {
+  z-index: 111;
+}
+
 </style>
 </head>
 <body>
