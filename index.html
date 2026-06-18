@@ -75,7 +75,7 @@ button {
 }
 
 .corner {
-  height: 38px;
+  height: 34px;
   margin-bottom: 0;
 }
 
@@ -215,7 +215,7 @@ button {
 .bad-habit-row {
   min-height: var(--row-height);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px;
+  grid-template-columns: minmax(0, 1fr) 190px;
   gap: 8px;
   align-items: center;
   border-bottom: 1px solid #eee;
@@ -241,6 +241,7 @@ button {
   font-weight: 700;
   color: #111;
   line-height: 1.15;
+  white-space: nowrap;
 }
 
 .modal {
@@ -330,13 +331,16 @@ textarea {
 }
 
 .quit-date-wrap::after {
-  content: "↕";
+  content: "";
   position: absolute;
   right: 14px;
-  top: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #777;
+  top: 50%;
+  transform: translateY(-35%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #777;
   pointer-events: none;
 }
 
@@ -617,7 +621,8 @@ function getDates() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const startPast = new Date(2026, 4, 1);
+  const startPast = new Date(today);
+  startPast.setMonth(startPast.getMonth() - 1);
   const futureDays = 30;
 
   for (let d = new Date(startPast); d < today; d.setDate(d.getDate() + 1)) {
