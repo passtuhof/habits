@@ -478,6 +478,16 @@ textarea {
     --day-width: 33px;
   }
 }
+
+#categoryColor {
+  font-weight: 400;
+}
+#categoryColor option[value="red"] { color: #ff3b30; }
+#categoryColor option[value="green"] { color: #34c759; }
+#categoryColor option[value="blue"] { color: #007aff; }
+#categoryColor option[value="yellow"] { color: #ffcc00; }
+#categoryColor option[value="black"] { color: #111111; }
+
 </style>
 </head>
 <body>
@@ -581,8 +591,20 @@ textarea {
 
 <div class="modal" id="categoryModal">
   <div class="modal-content">
-    <h2>Название категории</h2>
-    <input id="categoryTitleInput" placeholder="Название категории">
+    <h2>Редактирование категории</h2>
+
+    <div class="label">Название</div>
+    <input id="categoryTitleInput" placeholder="Название">
+
+    <div class="label">Цвет</div>
+    <select id="categoryColor" onchange="colorSelect(this)">
+      <option value="red" style="color:#ff3b30;">Красный</option>
+      <option value="blue" style="color:#007aff;">Синий</option>
+      <option value="green" style="color:#34c759;">Зелёный</option>
+      <option value="yellow" style="color:#ffcc00;">Жёлтый</option>
+      <option value="black" style="color:#111111;">Черный</option>
+    </select>
+
     <div class="buttons">
       <button onclick="saveCategoryName()">Сохранить</button>
       <button class="cancel" onclick="closeCategoryModal()">Отмена</button>
@@ -1182,6 +1204,12 @@ function openCategoryModal(colorKey) {
   document.getElementById("categoryTitleInput").value =
     customCategory ? customCategory.name : (categoryNames[colorKey] || "Категория");
 
+  const categoryColor = document.getElementById("categoryColor");
+  if (categoryColor) {
+    categoryColor.value = customCategory ? (customCategory.color || "black") : colorKey;
+    colorSelect(categoryColor);
+  }
+
   document.getElementById("categoryModal").style.display = "flex";
 }
 
@@ -1189,13 +1217,31 @@ function saveCategoryName() {
   const value = document.getElementById("categoryTitleInput").value.trim();
   if (!value || !editingCategory) return;
 
+  const color = document.getElementById("categoryColor") ? document.getElementById("categoryColor").value : editingCategory;
   const customCategory = customCategories.find(cat => cat.id === editingCategory);
 
   if (customCategory) {
     customCategory.name = value;
+    customCategory.color = color;
     localStorage.setItem("customCategories", JSON.stringify(customCategories));
   } else {
     categoryNames[editingCategory] = value;
+
+    if (color && color !== editingCategory) {
+      habits.forEach(habit => {
+        if (isGoodHabit(habit) && habit.color === editingCategory) {
+          habit.color = color;
+        }
+      });
+
+      categoryNames[color] = value;
+      delete categoryNames[editingCategory];
+
+      collapsedCategories[color] = collapsedCategories[editingCategory];
+      delete collapsedCategories[editingCategory];
+
+      editingCategory = color;
+    }
   }
 
   save();
@@ -1225,7 +1271,8 @@ function colorSelect(select) {
     black: "#111111",
     red: "#ff3b30",
     green: "#34c759",
-    blue: "#007aff"
+    blue: "#007aff",
+    yellow: "#ffcc00"
   };
   select.style.color = colors[select.value] || "#111111";
 }
