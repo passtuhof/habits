@@ -791,6 +791,77 @@ button.disabled-save {
   color: #fff;
 }
 
+
+/* Красивый переключатель Хорошая / Плохая */
+.type-switch {
+  position: relative;
+  background: #eee;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.type-switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  background: #111;
+  border-radius: 9px;
+  transform: translateX(var(--habit-type-shift, 0%));
+  transition: transform 0.24s ease;
+  z-index: 0;
+}
+
+.type-switch.bad::before {
+  transform: translateX(var(--habit-type-shift, 100%));
+}
+
+.type-switch.dragging::before {
+  transition: none;
+}
+
+.type-switch .type-btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  color: #111;
+  border-radius: 9px;
+  transition: color 0.24s ease, background 0.24s ease;
+}
+
+.type-switch .type-btn.active {
+  background: transparent;
+  color: #fff;
+}
+
+.type-switch.drag-preview-good #goodTypeBtn {
+  color: #fff;
+}
+
+.type-switch.drag-preview-good #badTypeBtn {
+  color: #111;
+}
+
+.type-switch.drag-preview-bad #goodTypeBtn {
+  color: #111;
+}
+
+.type-switch.drag-preview-bad #badTypeBtn {
+  color: #fff;
+}
+
+.type-switch.disabled {
+  opacity: 0.55;
+  touch-action: auto;
+}
+
 </style>
 </head>
 <body>
@@ -1309,6 +1380,116 @@ function updateViolationsVisibility() {
 }
 
 
+
+let habitTypeToggleDrag = {
+  active: false,
+  moved: false,
+  rect: null
+};
+
+function updateHabitTypeToggleUI(typePreview = currentHabitType) {
+  const switcher = document.querySelector("#modal .type-switch");
+  const goodBtn = document.getElementById("goodTypeBtn");
+  const badBtn = document.getElementById("badTypeBtn");
+
+  if (!switcher || !goodBtn || !badBtn) return;
+
+  const isBad = typePreview === "bad";
+
+  switcher.classList.toggle("bad", isBad);
+  switcher.style.setProperty("--habit-type-shift", isBad ? "100%" : "0%");
+
+  goodBtn.classList.toggle("active", !isBad);
+  badBtn.classList.toggle("active", isBad);
+}
+
+function updateHabitTypeTogglePreview(typePreview) {
+  const switcher = document.querySelector("#modal .type-switch");
+  const goodBtn = document.getElementById("goodTypeBtn");
+  const badBtn = document.getElementById("badTypeBtn");
+
+  if (!switcher || !goodBtn || !badBtn) return;
+
+  const isBad = typePreview === "bad";
+
+  switcher.classList.toggle("drag-preview-good", !isBad);
+  switcher.classList.toggle("drag-preview-bad", isBad);
+
+  goodBtn.classList.toggle("active", !isBad);
+  badBtn.classList.toggle("active", isBad);
+}
+
+function clearHabitTypeTogglePreview() {
+  const switcher = document.querySelector("#modal .type-switch");
+  if (!switcher) return;
+  switcher.classList.remove("drag-preview-good", "drag-preview-bad");
+}
+
+function initHabitTypeToggleDrag() {
+  const switcher = document.querySelector("#modal .type-switch");
+  if (!switcher || switcher.dataset.dragReady === "true") return;
+
+  switcher.dataset.dragReady = "true";
+
+  switcher.addEventListener("pointerdown", function(event) {
+    if (editingIndex !== null) return;
+
+    habitTypeToggleDrag.active = true;
+    habitTypeToggleDrag.moved = false;
+    habitTypeToggleDrag.rect = switcher.getBoundingClientRect();
+
+    switcher.classList.add("dragging");
+    switcher.setPointerCapture(event.pointerId);
+    switcher.style.setProperty("--habit-type-shift", currentHabitType === "bad" ? "100%" : "0%");
+    updateHabitTypeTogglePreview(currentHabitType);
+  });
+
+  switcher.addEventListener("pointermove", function(event) {
+    if (!habitTypeToggleDrag.active || !habitTypeToggleDrag.rect) return;
+
+    event.preventDefault();
+    habitTypeToggleDrag.moved = true;
+
+    const rect = habitTypeToggleDrag.rect;
+    const position = (event.clientX - rect.left) / rect.width;
+    const shift = Math.max(0, Math.min(100, position * 200 - 50));
+    const previewType = event.clientX >= rect.left + rect.width / 2 ? "bad" : "good";
+
+    switcher.style.setProperty("--habit-type-shift", shift + "%");
+    updateHabitTypeTogglePreview(previewType);
+  }, { passive: false });
+
+  function finishDrag(event) {
+    if (!habitTypeToggleDrag.active || !habitTypeToggleDrag.rect) return;
+
+    const rect = habitTypeToggleDrag.rect;
+    const finalType = event.clientX >= rect.left + rect.width / 2 ? "bad" : "good";
+
+    habitTypeToggleDrag.active = false;
+    habitTypeToggleDrag.rect = null;
+
+    switcher.classList.remove("dragging");
+    clearHabitTypeTogglePreview();
+
+    if (event.pointerId !== undefined) {
+      try { switcher.releasePointerCapture(event.pointerId); } catch (e) {}
+    }
+
+    if (habitTypeToggleDrag.moved) {
+      currentHabitType = finalType;
+      updateHabitTypeUI(false);
+      updateHabitSaveButton();
+    } else {
+      updateHabitTypeToggleUI();
+    }
+
+    habitTypeToggleDrag.moved = false;
+  }
+
+  switcher.addEventListener("pointerup", finishDrag);
+  switcher.addEventListener("pointercancel", finishDrag);
+}
+
 function getHabitFormSnapshot() {
   return JSON.stringify({
     type: currentHabitType,
@@ -1803,10 +1984,13 @@ function updateHabitTypeUI(disabled) {
   const goodFields = document.getElementById("goodFields");
   const badFields = document.getElementById("badFields");
 
-  goodBtn.classList.toggle("active", currentHabitType === "good");
-  badBtn.classList.toggle("active", currentHabitType === "bad");
   goodBtn.disabled = disabled;
   badBtn.disabled = disabled;
+
+  const typeSwitch = goodBtn.closest(".type-switch");
+  if (typeSwitch) typeSwitch.classList.toggle("disabled", disabled);
+
+  updateHabitTypeToggleUI();
 
   goodFields.style.display = currentHabitType === "good" ? "block" : "none";
   badFields.style.display = currentHabitType === "bad" ? "block" : "none";
@@ -1822,6 +2006,7 @@ function updateHabitTypeUI(disabled) {
 }
 
 function openModal() {
+  initHabitTypeToggleDrag();
   editingIndex = null;
   currentHabitType = "good";
 
@@ -1846,6 +2031,7 @@ function openModal() {
 }
 
 function editHabit(index) {
+  initHabitTypeToggleDrag();
   if (dragIndex !== null || dragBadIndex !== null) return;
 
   editingIndex = index;
@@ -2179,6 +2365,7 @@ setColorValue("newCategoryColor", document.getElementById("newCategoryColor").va
 setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
 initViolationsToggleDrag();
+initHabitTypeToggleDrag();
 updateNewCategorySaveButton();
 updateCategorySaveButton();
 updateHabitSaveButton();
