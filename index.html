@@ -57,7 +57,8 @@ button {
   margin-bottom: 6px;
 }
 
-.category-left {
+.category-left,
+.bad-title-left {
   height: 34px;
   display: flex;
   align-items: center;
@@ -76,7 +77,8 @@ button {
   opacity: 0.8;
 }
 
-.category-title {
+.category-title,
+.bad-title-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -87,7 +89,8 @@ button {
   flex-shrink: 0;
 }
 
-.category-spacer {
+.category-spacer,
+.bad-title-right {
   height: 34px;
   border-bottom: 1px solid #eee;
 }
@@ -164,6 +167,27 @@ button {
   border-bottom: 1px solid #eee;
 }
 
+.bad-row {
+  height: var(--row-height);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.bad-status {
+  position: sticky;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111;
+  background: #fff;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
 .cell {
   width: 23px;
   height: 23px;
@@ -200,6 +224,30 @@ button {
   border-radius: 18px;
   width: 100%;
   max-width: 360px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.type-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.type-btn {
+  background: #eee;
+  color: #111;
+  font-weight: 700;
+}
+
+.type-btn.active {
+  background: #111;
+  color: #fff;
+}
+
+.type-btn.disabled {
+  opacity: 0.55;
 }
 
 input, textarea, select {
@@ -222,6 +270,12 @@ textarea {
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 6px;
+}
+
+.bad-counter {
+  font-size: 13px;
+  font-weight: 700;
+  margin: -4px 0 12px 0;
 }
 
 .buttons {
@@ -293,16 +347,29 @@ textarea {
   <div class="modal-content">
     <h2 id="modalTitle">Новая привычка</h2>
 
+    <div class="type-switch">
+      <button id="goodTypeBtn" class="type-btn active" onclick="setHabitType('good')">Хорошая</button>
+      <button id="badTypeBtn" class="type-btn" onclick="setHabitType('bad')">Плохая</button>
+    </div>
+
     <input id="habitTitle" placeholder="Название привычки">
     <textarea id="habitDescription" placeholder="Описание привычки" oninput="autoResize(this)"></textarea>
 
-    <div class="label">Категория</div>
-    <select id="habitColor" onchange="colorSelect(this)">
-      <option value="black" style="color:#111111;font-weight:700;">Нет</option>
-      <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
-      <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
-      <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
-    </select>
+    <div id="goodFields">
+      <div class="label">Категория</div>
+      <select id="habitColor" onchange="colorSelect(this)">
+        <option value="black" style="color:#111111;font-weight:700;">Нет</option>
+        <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
+        <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
+        <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
+      </select>
+    </div>
+
+    <div id="badFields" style="display:none;">
+      <div class="label">Дата отказа</div>
+      <input id="quitDate" type="date" onchange="updateQuitCounter()">
+      <div id="quitCounter" class="bad-counter"></div>
+    </div>
 
     <div class="buttons">
       <button onclick="saveHabit()">Сохранить</button>
@@ -340,6 +407,7 @@ let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")
 
 let editingIndex = null;
 let editingCategory = null;
+let currentHabitType = "good";
 
 let dragIndex = null;
 let dragColor = null;
@@ -353,6 +421,16 @@ const colorMap = {
   blue: "#007aff"
 };
 
+function normalizeHabits() {
+  habits = habits.map(habit => {
+    if (!habit.type) habit.type = "good";
+    if (habit.type === "bad" && !habit.quitDate) habit.quitDate = toDateKey(new Date());
+    return habit;
+  });
+}
+
+normalizeHabits();
+
 function save() {
   localStorage.setItem("habits", JSON.stringify(habits));
   localStorage.setItem("categoryNames", JSON.stringify(categoryNames));
@@ -365,6 +443,29 @@ function toDateKey(date) {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function getTodayKey() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return toDateKey(today);
+}
+
+function daysSince(dateKey) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const date = new Date(dateKey + "T00:00:00");
+  date.setHours(0, 0, 0, 0);
+
+  const diff = today - date;
+  return Math.max(0, Math.floor(diff / 86400000));
+}
+
+function getDaysText(n) {
+  if (n % 10 === 1 && n % 100 !== 11) return "день";
+  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100)) return "дня";
+  return "дней";
 }
 
 function getDates() {
@@ -426,7 +527,7 @@ function render() {
   });
 
   categoryOrder.forEach((colorKey, categoryIndex) => {
-    const categoryHabits = habits.filter(habit => habit.color === colorKey);
+    const categoryHabits = habits.filter(habit => (habit.type || "good") === "good" && habit.color === colorKey);
     if (categoryHabits.length === 0) return;
 
     const color = colorMap[colorKey];
@@ -452,6 +553,7 @@ function render() {
     if (isCollapsed) return;
 
     habits.forEach((habit, habitIndex) => {
+      if ((habit.type || "good") !== "good") return;
       if (habit.color !== colorKey) return;
 
       leftList.innerHTML += `
@@ -485,6 +587,8 @@ function render() {
     });
   });
 
+  renderBadHabits();
+
   setTimeout(() => {
     const scroll = document.getElementById("rightScroll");
 
@@ -498,6 +602,44 @@ function render() {
       window.initialScrollDone = true;
     }
   }, 0);
+}
+
+function renderBadHabits() {
+  const badHabits = habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => item.habit.type === "bad");
+
+  if (badHabits.length === 0) return;
+
+  const leftList = document.getElementById("leftList");
+  const checksList = document.getElementById("checksList");
+
+  leftList.innerHTML += `
+    <div class="bad-title-left">
+      <div class="bad-title-text">Отказ от плохих привычек</div>
+    </div>
+  `;
+  checksList.innerHTML += `<div class="bad-title-right"></div>`;
+
+  badHabits.forEach(item => {
+    const days = daysSince(item.habit.quitDate || getTodayKey());
+
+    leftList.innerHTML += `
+      <div class="habit-left" data-index="${item.index}">
+        <div class="name-wrap" onclick="editHabit(${item.index})">
+          <div class="habit-name" style="color:#111">
+            ${item.habit.title}
+          </div>
+        </div>
+      </div>
+    `;
+
+    checksList.innerHTML += `
+      <div class="bad-row">
+        <div class="bad-status">Вы отказались ${days} ${getDaysText(days)} назад</div>
+      </div>
+    `;
+  });
 }
 
 function toggleCategory(event, colorKey) {
@@ -549,6 +691,8 @@ function endCategoryDrag() {
 }
 
 function startDrag(event, index) {
+  if (habits[index].type === "bad") return;
+
   dragIndex = index;
   dragColor = habits[index].color;
   startY = event.touches[0].clientY;
@@ -579,7 +723,7 @@ function moveDrag(event) {
 function moveWithinCategory(direction) {
   const sameColorIndexes = habits
     .map((habit, index) => ({ habit, index }))
-    .filter(item => item.habit.color === dragColor)
+    .filter(item => (item.habit.type || "good") === "good" && item.habit.color === dragColor)
     .map(item => item.index);
 
   const currentPosition = sameColorIndexes.indexOf(dragIndex);
@@ -612,6 +756,8 @@ function endDrag() {
 }
 
 function toggleHabit(habitIndex, dateKey) {
+  if ((habits[habitIndex].type || "good") !== "good") return;
+
   if (!habits[habitIndex].done) {
     habits[habitIndex].done = {};
   }
@@ -622,8 +768,49 @@ function toggleHabit(habitIndex, dateKey) {
   render();
 }
 
+function setHabitType(type) {
+  if (editingIndex !== null) return;
+
+  currentHabitType = type;
+  updateHabitTypeUi(false);
+}
+
+function updateHabitTypeUi(disabled) {
+  const goodBtn = document.getElementById("goodTypeBtn");
+  const badBtn = document.getElementById("badTypeBtn");
+  const goodFields = document.getElementById("goodFields");
+  const badFields = document.getElementById("badFields");
+
+  goodBtn.classList.toggle("active", currentHabitType === "good");
+  badBtn.classList.toggle("active", currentHabitType === "bad");
+  goodBtn.classList.toggle("disabled", disabled);
+  badBtn.classList.toggle("disabled", disabled);
+
+  goodFields.style.display = currentHabitType === "good" ? "block" : "none";
+  badFields.style.display = currentHabitType === "bad" ? "block" : "none";
+
+  if (currentHabitType === "bad") {
+    const quitDate = document.getElementById("quitDate");
+    quitDate.max = getTodayKey();
+    if (!quitDate.value) quitDate.value = getTodayKey();
+    updateQuitCounter();
+  }
+}
+
+function updateQuitCounter() {
+  const quitDate = document.getElementById("quitDate");
+  const counter = document.getElementById("quitCounter");
+
+  if (!quitDate.value) quitDate.value = getTodayKey();
+  if (quitDate.value > getTodayKey()) quitDate.value = getTodayKey();
+
+  const days = daysSince(quitDate.value);
+  counter.textContent = `Вы отказались от привычки ${days} ${getDaysText(days)} назад`;
+}
+
 function openModal() {
   editingIndex = null;
+  currentHabitType = "good";
 
   document.getElementById("modalTitle").textContent = "Новая привычка";
   document.getElementById("habitTitle").value = "";
@@ -631,7 +818,11 @@ function openModal() {
   document.getElementById("habitDescription").style.height = "74px";
   document.getElementById("habitColor").value = "black";
   colorSelect(document.getElementById("habitColor"));
+  document.getElementById("quitDate").value = getTodayKey();
+  document.getElementById("quitDate").max = getTodayKey();
   document.getElementById("deleteButton").style.display = "none";
+
+  updateHabitTypeUi(false);
 
   document.getElementById("modal").style.display = "flex";
 }
@@ -640,18 +831,24 @@ function editHabit(index) {
   if (dragIndex !== null) return;
 
   editingIndex = index;
+  currentHabitType = habits[index].type || "good";
 
   document.getElementById("modalTitle").textContent = "Редактировать привычку";
   document.getElementById("habitTitle").value = habits[index].title;
   document.getElementById("habitDescription").value = habits[index].description || "";
   document.getElementById("habitColor").value = habits[index].color || "black";
+  document.getElementById("quitDate").value = habits[index].quitDate || getTodayKey();
+  document.getElementById("quitDate").max = getTodayKey();
   colorSelect(document.getElementById("habitColor"));
   document.getElementById("deleteButton").style.display = "block";
+
+  updateHabitTypeUi(true);
 
   document.getElementById("modal").style.display = "flex";
 
   setTimeout(() => {
     autoResize(document.getElementById("habitDescription"));
+    if (currentHabitType === "bad") updateQuitCounter();
   }, 0);
 }
 
@@ -659,21 +856,38 @@ function saveHabit() {
   const title = document.getElementById("habitTitle").value.trim();
   const description = document.getElementById("habitDescription").value.trim();
   const color = document.getElementById("habitColor").value;
+  const quitDate = document.getElementById("quitDate").value || getTodayKey();
 
   if (!title) return;
 
   if (editingIndex !== null) {
     habits[editingIndex].title = title;
     habits[editingIndex].description = description;
-    habits[editingIndex].color = color;
+
+    if ((habits[editingIndex].type || "good") === "good") {
+      habits[editingIndex].color = color;
+    } else {
+      habits[editingIndex].quitDate = quitDate;
+    }
   } else {
-    habits.push({
-      id: Date.now(),
-      title,
-      description,
-      color,
-      done: {}
-    });
+    if (currentHabitType === "good") {
+      habits.push({
+        id: Date.now(),
+        type: "good",
+        title,
+        description,
+        color,
+        done: {}
+      });
+    } else {
+      habits.push({
+        id: Date.now(),
+        type: "bad",
+        title,
+        description,
+        quitDate
+      });
+    }
   }
 
   save();
