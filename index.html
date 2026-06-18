@@ -753,6 +753,26 @@ button.disabled-save {
   transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
 }
 
+
+/* Перетаскивание тумблера настроек */
+.toggle-two {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.toggle-two::before {
+  transform: translateX(var(--toggle-shift, 0%)) !important;
+}
+
+.toggle-two.yes::before {
+  transform: translateX(var(--toggle-shift, 100%)) !important;
+}
+
+.toggle-two.dragging::before {
+  transition: none;
+}
+
 </style>
 </head>
 <body>
@@ -1139,8 +1159,73 @@ function confirmDeleteCurrentHabit() {
   render();
 }
 
+
+let violationsToggleDrag = {
+  active: false,
+  moved: false,
+  rect: null
+};
+
+function initViolationsToggleDrag() {
+  const toggle = document.querySelector("#settingsModal .toggle-two");
+  if (!toggle || toggle.dataset.dragReady === "true") return;
+
+  toggle.dataset.dragReady = "true";
+
+  toggle.addEventListener("pointerdown", function(event) {
+    violationsToggleDrag.active = true;
+    violationsToggleDrag.moved = false;
+    violationsToggleDrag.rect = toggle.getBoundingClientRect();
+
+    toggle.classList.add("dragging");
+    toggle.setPointerCapture(event.pointerId);
+    toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
+  });
+
+  toggle.addEventListener("pointermove", function(event) {
+    if (!violationsToggleDrag.active || !violationsToggleDrag.rect) return;
+
+    event.preventDefault();
+    violationsToggleDrag.moved = true;
+
+    const rect = violationsToggleDrag.rect;
+    const position = (event.clientX - rect.left) / rect.width;
+    const shift = Math.max(0, Math.min(100, position * 200 - 50));
+
+    toggle.style.setProperty("--toggle-shift", shift + "%");
+  }, { passive: false });
+
+  function finishDrag(event) {
+    if (!violationsToggleDrag.active || !violationsToggleDrag.rect) return;
+
+    const rect = violationsToggleDrag.rect;
+    const shouldBeYes = event.clientX >= rect.left + rect.width / 2;
+
+    violationsToggleDrag.active = false;
+    violationsToggleDrag.rect = null;
+
+    toggle.classList.remove("dragging");
+
+    if (event.pointerId !== undefined) {
+      try { toggle.releasePointerCapture(event.pointerId); } catch (e) {}
+    }
+
+    if (violationsToggleDrag.moved) {
+      setViolationsSetting(shouldBeYes);
+    } else {
+      updateSettingsUI();
+    }
+
+    violationsToggleDrag.moved = false;
+  }
+
+  toggle.addEventListener("pointerup", finishDrag);
+  toggle.addEventListener("pointercancel", finishDrag);
+}
+
 function openSettingsModal() {
   updateSettingsUI();
+  initViolationsToggleDrag();
   showModal("settingsModal");
 }
 
@@ -1166,7 +1251,10 @@ function updateSettingsUI() {
   yesBtn.classList.toggle("active", appSettings.showViolations);
 
   const toggle = noBtn.closest(".toggle-two");
-  if (toggle) toggle.classList.toggle("yes", appSettings.showViolations);
+  if (toggle) {
+    toggle.classList.toggle("yes", appSettings.showViolations);
+    toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
+  }
 }
 
 function updateViolationsVisibility() {
@@ -2046,6 +2134,7 @@ refreshCategorySelect();
 setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "black");
 setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
+initViolationsToggleDrag();
 updateNewCategorySaveButton();
 updateCategorySaveButton();
 updateHabitSaveButton();
