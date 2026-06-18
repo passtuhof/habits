@@ -1506,3 +1506,27 @@ render();
   width: calc(100% - 32px);
 }
 </style>
+
+<style>
+#quitCalendar.open{
+  position:fixed !important;
+  inset:0 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:rgba(0,0,0,.35) !important;
+  z-index:99999 !important;
+}
+
+#quitCalendar .quit-calendar-content,
+#quitCalendar .calendar-content,
+#quitCalendar > div{
+  position:relative !important;
+  top:auto !important;
+  left:auto !important;
+  transform:none !important;
+  width:min(360px, calc(100vw - 32px)) !important;
+  max-width:360px !important;
+  margin:0 auto !important;
+}
+</style>
