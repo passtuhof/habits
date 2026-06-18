@@ -1483,3 +1483,26 @@ render();
 </script>
 </body>
 </html>
+
+<style>
+#quitCalendar.open,
+#categoryPicker.open,
+#colorPicker.open{
+  position: fixed !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0,0,0,.35) !important;
+  z-index: 9999 !important;
+}
+
+#quitCalendar.open > *,
+#categoryPicker.open > *,
+#colorPicker.open > *{
+  max-width: 360px;
+  width: calc(100% - 32px);
+}
+</style>
