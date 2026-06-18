@@ -573,9 +573,9 @@ textarea {
 <div class="modal" id="newCategoryModal">
   <div class="modal-content">
     <h2>Новая категория</h2>
-    <div class="label">Название категории</div>
+    <div class="label">Название</div>
     <input id="newCategoryName" placeholder="Название категории">
-    <div class="label">Цвет категории</div>
+    <div class="label">Цвет</div>
     <select id="newCategoryColor">
       <option value="red">Красный</option>
       <option value="green">Зеленый</option>
@@ -591,12 +591,12 @@ textarea {
 
 <div class="modal" id="categoryModal">
   <div class="modal-content">
-    <h2 style='font-size:22px;white-space:nowrap;text-align:center;'>Редактировать категорию</h2>
+    <h2 style='font-size:22px;white-space:nowrap;text-align:left;'>Редактировать категорию</h2>
 
-    <div class="label">Название категории</div>
+    <div class="label">Название</div>
     <input id="categoryTitleInput" placeholder="Название">
 
-    <div class="label">Цвет категории</div>
+    <div class="label">Цвет</div>
     <select id="categoryColor" onchange="colorSelect(this)">
       <option value="black" style="color:#111111;">Чёрный</option>
       <option value="red" style="color:#ff3b30;">Красный</option>
@@ -608,6 +608,17 @@ textarea {
     <div class="buttons">
       <button onclick="saveCategoryName()">Сохранить</button>
       <button class="cancel" onclick="closeCategoryModal()">Отмена</button>
+      <button class="delete-in-modal" onclick="openCategoryDeleteChoice()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="categoryDeleteChoiceModal">
+  <div class="modal-content">
+    <h2 style="font-size:20px;">Что сделать с привычками из вашей категории?</h2>
+    <div class="buttons">
+      <button type="button">Переместить</button>
+      <button type="button" class="delete-in-modal">Удалить</button>
     </div>
   </div>
 </div>
@@ -1252,6 +1263,15 @@ function saveCategoryName() {
 function closeCategoryModal() {
   document.getElementById("categoryModal").style.display = "none";
   editingCategory = null;
+}
+
+
+function openCategoryDeleteChoice() {
+  document.getElementById("categoryDeleteChoiceModal").style.display = "flex";
+}
+
+function closeCategoryDeleteChoice() {
+  document.getElementById("categoryDeleteChoiceModal").style.display = "none";
 }
 
 function updateDescriptionCounter() {
