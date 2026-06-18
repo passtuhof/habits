@@ -91,7 +91,7 @@ button {
   gap: 4px;
   border-bottom: 1px solid #eee;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
   touch-action: none;
 }
 
@@ -529,11 +529,9 @@ textarea {
 
     <div id="goodFields">
       <div class="label">Категория</div>
-      <select id="habitColor" onchange="colorSelect(this)">
-        <option value="black" style="color:#111111;font-weight:700;">Нет</option>
-        <option value="red" style="color:#ff3b30;font-weight:700;">Красная</option>
-        <option value="green" style="color:#34c759;font-weight:700;">Зеленая</option>
-        <option value="blue" style="color:#007aff;font-weight:700;">Синяя</option>
+      <select id="habitColor" onchange="handleCategorySelect(this)">
+        <option value="black">Нет</option>
+        <option value="add_category">➕ Добавить</option>
       </select>
     </div>
 
@@ -557,6 +555,26 @@ textarea {
       <button onclick="saveHabit()">Сохранить</button>
       <button class="cancel" onclick="closeModal()">Отмена</button>
       <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="newCategoryModal">
+  <div class="modal-content">
+    <h2>Новая категория</h2>
+    <div class="label">Название категории</div>
+    <input id="newCategoryName" placeholder="Название категории">
+    <div class="label">Цвет категории</div>
+    <select id="newCategoryColor">
+      <option value="red">Красный</option>
+      <option value="green">Зеленый</option>
+      <option value="blue">Синий</option>
+      <option value="black">Черный</option>
+    </select>
+    <div class="buttons">
+      <button onclick="saveNewCategory()">Сохранить</button>
+      <button class="cancel" onclick="closeNewCategoryModal()">Отмена</button>
     </div>
   </div>
 </div>
@@ -1275,6 +1293,48 @@ function changeViolations(delta) {
   const current = Number(document.getElementById("violationCount").textContent) || 0;
   setViolationsValue(current + delta);
 }
+
+
+let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [];
+
+function refreshCategorySelect(){
+ const s=document.getElementById('habitColor');
+ if(!s) return;
+ const cur=s.value;
+ s.innerHTML='<option value="black">Нет</option>';
+ customCategories.forEach(c=>{
+   const o=document.createElement('option');
+   o.value=c.id;o.textContent=c.name;o.style.color=c.color;
+   s.appendChild(o);
+ });
+ const a=document.createElement('option');
+ a.value='add_category';a.textContent='➕ Добавить';
+ s.appendChild(a);
+ if(cur && cur!=='add_category') s.value=cur;
+}
+
+function handleCategorySelect(sel){
+ if(sel.value==='add_category'){openNewCategoryModal(); sel.value='black';}
+}
+
+function openNewCategoryModal(){
+ document.getElementById('newCategoryModal').style.display='flex';
+}
+function closeNewCategoryModal(){
+ document.getElementById('newCategoryModal').style.display='none';
+}
+function saveNewCategory(){
+ const name=document.getElementById('newCategoryName').value.trim();
+ const color=document.getElementById('newCategoryColor').value;
+ if(!name) return;
+ const cat={id:'cat_'+Date.now(),name,color};
+ customCategories.push(cat);
+ localStorage.setItem('customCategories',JSON.stringify(customCategories));
+ refreshCategorySelect();
+ document.getElementById('habitColor').value=cat.id;
+ closeNewCategoryModal();
+}
+refreshCategorySelect();
 
 render();
 </script>
