@@ -537,6 +537,51 @@ z-index:10;
 background:#eee;
 border-radius:50%;
 }
+
+.top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-block-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 8px 0 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.toggle-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #eee;
+  border-radius: 12px;
+  padding: 3px;
+  min-width: 112px;
+}
+
+.toggle-two button {
+  background: transparent;
+  color: #111;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.toggle-two button.active {
+  background: #111;
+  color: #fff;
+}
+
 </style>
 </head>
 <body>
@@ -544,7 +589,10 @@ border-radius:50%;
 <div class="app">
   <div class="top">
     <h1>Привычки</h1>
-    <button onclick="openModal()">+</button>
+    <div class="top-actions">
+      <button onclick="openSettingsModal()">Настройки</button>
+      <button onclick="openModal()">+</button>
+    </div>
   </div>
 
   <div id="emptyState" class="empty-state">У вас пока нет привычек</div>
@@ -567,6 +615,24 @@ border-radius:50%;
   <div class="bad-section" id="badSection">
     <div class="bad-section-title" id="badSectionTitle">Отказ от плохих привычек</div>
     <div id="badList"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="settingsModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close-btn" onclick="closeSettingsModal()">×</button>
+    <h2>Настройки</h2>
+
+    <div class="settings-block-title">Плохие привычки</div>
+
+    <div class="settings-row">
+      <div>Нарушения</div>
+      <div class="toggle-two">
+        <button type="button" id="violationsNoBtn" onclick="setViolationsSetting(false)">Нет</button>
+        <button type="button" id="violationsYesBtn" onclick="setViolationsSetting(true)">Да</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -695,6 +761,9 @@ let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")
 let editingIndex = null;
 let editingCategory = null;
 let currentHabitType = "good";
+let appSettings = JSON.parse(localStorage.getItem("appSettings")) || {
+  showViolations: false
+};
 
 let dragIndex = null;
 let dragColor = null;
@@ -724,6 +793,41 @@ function hideModal(id) {
   if (modal) modal.classList.remove("open");
 }
 
+
+function openSettingsModal() {
+  updateSettingsUI();
+  showModal("settingsModal");
+}
+
+function closeSettingsModal() {
+  hideModal("settingsModal");
+}
+
+function setViolationsSetting(value) {
+  appSettings.showViolations = value;
+  save();
+  updateSettingsUI();
+  updateViolationsVisibility();
+  render();
+}
+
+function updateSettingsUI() {
+  const noBtn = document.getElementById("violationsNoBtn");
+  const yesBtn = document.getElementById("violationsYesBtn");
+
+  if (!noBtn || !yesBtn) return;
+
+  noBtn.classList.toggle("active", !appSettings.showViolations);
+  yesBtn.classList.toggle("active", appSettings.showViolations);
+}
+
+function updateViolationsVisibility() {
+  const row = document.getElementById("violationsRow");
+  if (!row) return;
+
+  row.style.display = (appSettings.showViolations && currentHabitType === "bad" && editingIndex !== null) ? "flex" : "none";
+}
+
 function normalizeHabits() {
   habits = habits.map(habit => {
     if (!habit.type) habit.type = "good";
@@ -740,6 +844,7 @@ function save() {
   localStorage.setItem("categoryNames", JSON.stringify(categoryNames));
   localStorage.setItem("categoryOrder", JSON.stringify(categoryOrder));
   localStorage.setItem("collapsedCategories", JSON.stringify(collapsedCategories));
+  localStorage.setItem("appSettings", JSON.stringify(appSettings));
 }
 
 function toDateKey(date) {
@@ -944,7 +1049,7 @@ function render() {
           ontouchend="endBadDrag(event)">${habit.title}</div>
         <div class="bad-status">
           <div>Вы отказались ${count} ${dayWord(count)} назад</div>
-          <div>Вы нарушили ${habit.violations || 0} раз</div>
+          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} раз</div>` : ""}
         </div>
       </div>
     `;
@@ -1152,6 +1257,8 @@ function updateHabitTypeUI(disabled) {
   } else {
     hideQuitCalendar();
   }
+
+  updateViolationsVisibility();
 }
 
 function openModal() {
@@ -1167,7 +1274,7 @@ function openModal() {
   colorSelect(document.getElementById("habitColor"));
   setQuitDateValue(todayKey());
   setViolationsValue(0);
-  document.getElementById("violationsRow").style.display = "none";
+  updateViolationsVisibility();
   document.getElementById("deleteButton").style.display = "none";
 
   updateHabitTypeUI(false);
@@ -1190,7 +1297,7 @@ function editHabit(index) {
   colorSelect(document.getElementById("habitColor"));
   setQuitDateValue(habits[index].quitDate || todayKey());
   setViolationsValue(habits[index].violations || 0);
-  document.getElementById("violationsRow").style.display = currentHabitType === "bad" ? "flex" : "none";
+  updateViolationsVisibility();
   document.getElementById("deleteButton").style.display = "block";
 
   updateHabitTypeUI(true);
@@ -1516,6 +1623,7 @@ function saveNewCategory(){
  closeNewCategoryModal();
 }
 refreshCategorySelect();
+updateSettingsUI();
 
 render();
 </script>
