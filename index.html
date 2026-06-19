@@ -552,7 +552,6 @@ border-radius:50%;
   align-items:center;
   justify-content:center;
   font-size:20px;
-  line-height:1;
 }
 
 .settings-block-title {
@@ -604,7 +603,7 @@ border-radius:50%;
   width:100%;
   background:#f3f3f3;
   color:#111;
-  text-align:center;
+  text-align:left;
   padding:12px;
   border-radius:12px;
   font-size:16px;
@@ -686,204 +685,58 @@ textarea,
 }
 
 
-@media (orientation: landscape) {
-  .app{
-    max-width:none;
-    width:100%;
-  }
-
-  .tracker{
-    grid-template-columns: minmax(220px, 30%) 1fr;
-    width:100%;
-  }
-
-  .right-scroll{
-    width:100%;
-  }
-
-  .right-inner{
-    min-width:max-content;
-  }
+/* Плавная сортировка без render() во время движения */
+.habit-left,
+.check-row,
+.bad-habit-row {
+  will-change: transform;
 }
 
+.habit-left.drag-press,
+.check-row.drag-press,
+.bad-habit-row.drag-press {
+  transform: scale(1.018);
+  background: rgba(0,0,0,0.035);
+  border-radius: 10px;
+}
 
-/* Плавный тумблер настроек */
-.toggle-two {
+.habit-left.dragging,
+.check-row.dragging,
+.bad-habit-row.dragging {
+  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
+  background: rgba(0,0,0,0.06);
+  border-radius: 10px;
+  opacity: 0.95;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.14);
   position: relative;
-  overflow: hidden;
-  transition: background 0.24s ease;
+  z-index: 30;
+  transition:
+    transform 0.06s linear,
+    background 0.18s ease,
+    opacity 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.toggle-two::before {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: calc(50% - 3px);
-  height: calc(100% - 6px);
-  background: #111;
-  border-radius: 9px;
-  transform: translateX(0);
-  transition: transform 0.24s ease;
-  z-index: 0;
+.habit-left.sort-shift-up,
+.check-row.sort-shift-up,
+.bad-habit-row.sort-shift-up {
+  transform: translateY(calc(var(--row-height) * -1));
 }
 
-.toggle-two.yes::before {
-  transform: translateX(100%);
+.habit-left.sort-shift-down,
+.check-row.sort-shift-down,
+.bad-habit-row.sort-shift-down {
+  transform: translateY(var(--row-height));
 }
 
-.toggle-two button {
-  position: relative;
-  z-index: 1;
-  transition: color 0.24s ease, background 0.24s ease;
+.habit-left.sort-shift-up,
+.habit-left.sort-shift-down,
+.check-row.sort-shift-up,
+.check-row.sort-shift-down,
+.bad-habit-row.sort-shift-up,
+.bad-habit-row.sort-shift-down {
+  transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
-
-.toggle-two button.active {
-  background: transparent;
-  color: #fff;
-}
-
-button:disabled,
-button.disabled-save {
-  background: #ddd !important;
-  color: #999 !important;
-  pointer-events: none;
-}
-
-.category-left {
-  transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
-}
-
-
-/* Перетаскивание тумблера настроек */
-.toggle-two {
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.toggle-two::before {
-  transform: translateX(var(--toggle-shift, 0%)) !important;
-}
-
-.toggle-two.yes::before {
-  transform: translateX(var(--toggle-shift, 100%)) !important;
-}
-
-.toggle-two.dragging::before {
-  transition: none;
-}
-
-
-/* Интерактивная подсветка текста при перетаскивании тумблера */
-.toggle-two.drag-preview-no #violationsNoBtn {
-  color: #fff;
-}
-
-.toggle-two.drag-preview-no #violationsYesBtn {
-  color: #111;
-}
-
-.toggle-two.drag-preview-yes #violationsNoBtn {
-  color: #111;
-}
-
-.toggle-two.drag-preview-yes #violationsYesBtn {
-  color: #fff;
-}
-
-
-/* Красивый переключатель Хорошая / Плохая */
-.type-switch {
-  position: relative;
-  background: #eee;
-  border-radius: 12px;
-  padding: 3px;
-  gap: 0;
-  overflow: hidden;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.type-switch::before {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: calc(50% - 3px);
-  height: calc(100% - 6px);
-  background: #111;
-  border-radius: 9px;
-  transform: translateX(var(--habit-type-shift, 0%));
-  transition: transform 0.24s ease;
-  z-index: 0;
-}
-
-.type-switch.bad::before {
-  transform: translateX(var(--habit-type-shift, 100%));
-}
-
-.type-switch.dragging::before {
-  transition: none;
-}
-
-.type-switch .type-btn {
-  position: relative;
-  z-index: 1;
-  background: transparent;
-  color: #111;
-  border-radius: 9px;
-  transition: color 0.24s ease, background 0.24s ease;
-}
-
-.type-switch .type-btn.active {
-  background: transparent;
-  color: #fff;
-}
-
-.type-switch.drag-preview-good #goodTypeBtn {
-  color: #fff;
-}
-
-.type-switch.drag-preview-good #badTypeBtn {
-  color: #111;
-}
-
-.type-switch.drag-preview-bad #goodTypeBtn {
-  color: #111;
-}
-
-.type-switch.drag-preview-bad #badTypeBtn {
-  color: #fff;
-}
-
-.type-switch.disabled {
-  opacity: 0.55;
-  touch-action: auto;
-}
-
-
-.field-wrap {
-  position: relative;
-  margin-bottom: 12px;
-}
-
-.field-wrap input {
-  margin-bottom: 0;
-  padding-right: 58px;
-}
-
-.add-habit-btn svg,
-.top-actions button svg {
-  display: block;
-  flex-shrink: 0;
-}
-
-
-/* Визуальный сдвиг соседних строк во время сортировки */
-.sort-shift-up{transform:translateY(calc(var(--row-height) * -1));}
-.sort-shift-down{transform:translateY(var(--row-height));}
 
 </style>
 </head>
@@ -893,16 +746,8 @@ button.disabled-save {
   <div class="top">
     <h1>Привычки</h1>
     <div class="top-actions">
-      <button class="add-habit-btn" onclick="openModal()" title="Добавить привычку">
-        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
-        </svg>
-      </button>
-      <button onclick="openSettingsModal()" title="Настройки" style="display:flex;align-items:center;justify-content:center;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.1 7.1 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z" fill="white"/>
-        </svg>
-      </button>
+      <button onclick="openSettingsModal()" title="Настройки">⚙️</button>
+      <button onclick="openModal()">+</button>
     </div>
   </div>
 
@@ -986,13 +831,10 @@ button.disabled-save {
       <button id="badTypeBtn" class="type-btn" onclick="setHabitType('bad')">Плохая</button>
     </div>
 
-    <div class="field-wrap">
-      <input id="habitTitle" maxlength="50" placeholder="Название привычки" oninput="updateHabitTitleCounter(); updateHabitSaveButton()">
-      <div id="habitTitleCounter" class="char-counter">0/50</div>
-    </div>
+    <input id="habitTitle" placeholder="Название привычки">
 
     <div class="description-wrap">
-      <textarea id="habitDescription" maxlength="1000" placeholder="Описание привычки" oninput="updateDescriptionCounter(); updateHabitSaveButton();"></textarea>
+      <textarea id="habitDescription" maxlength="1000" placeholder="Описание привычки" oninput="updateDescriptionCounter()"></textarea>
       <div id="descriptionCounter" class="char-counter">0/1000</div>
     </div>
 
@@ -1018,7 +860,7 @@ button.disabled-save {
     </div>
 
     <div class="buttons">
-      <button id="saveHabitButton" onclick="saveHabit()">Сохранить</button>
+      <button onclick="saveHabit()">Сохранить</button>
       <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
     </div>
   </div>
@@ -1037,15 +879,12 @@ button.disabled-save {
     <button type="button" class="modal-close-btn" onclick="closeNewCategoryModal()">×</button>
     <h2>Новая категория</h2>
     <div class="label">Название</div>
-    <div class="field-wrap">
-      <input id="newCategoryName" maxlength="50" placeholder="Название категории" oninput="updateNewCategoryCounter(); updateNewCategorySaveButton()">
-      <div id="newCategoryCounter" class="char-counter">0/50</div>
-    </div>
+    <input id="newCategoryName" placeholder="Название категории">
     <div class="label">Цвет</div>
     <input id="newCategoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('newCategoryColor')" value="Чёрный">
     <input id="newCategoryColor" type="hidden" value="black">
     <div class="buttons">
-      <button id="saveNewCategoryButton" onclick="saveNewCategory()">Сохранить</button>
+      <button onclick="saveNewCategory()">Сохранить</button>
     </div>
   </div>
 </div>
@@ -1056,17 +895,14 @@ button.disabled-save {
     <h2 style='font-size:22px;white-space:nowrap;text-align:left;'>Редактировать категорию</h2>
 
     <div class="label">Название</div>
-    <div class="field-wrap">
-      <input id="categoryTitleInput" maxlength="50" placeholder="Название" oninput="updateCategoryTitleCounter(); updateCategorySaveButton()">
-      <div id="categoryTitleCounter" class="char-counter">0/50</div>
-    </div>
+    <input id="categoryTitleInput" placeholder="Название">
 
     <div class="label">Цвет</div>
     <input id="categoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('categoryColor')" value="Чёрный">
     <input id="categoryColor" type="hidden" value="black">
 
     <div class="buttons">
-      <button id="saveCategoryButton" onclick="saveCategoryName()">Сохранить</button>
+      <button onclick="saveCategoryName()">Сохранить</button>
       <button class="delete-in-modal" onclick="openCategoryDeleteChoice()">Удалить</button>
     </div>
   </div>
@@ -1093,7 +929,7 @@ let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
   blue: "Категория"
 };
 
-let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black"];
+let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black", "red", "green", "blue"];
 let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")) || {};
 
 let editingIndex = null;
@@ -1103,14 +939,22 @@ let appSettings = JSON.parse(localStorage.getItem("appSettings")) || {
   showViolations: false
 };
 
-let originalHabitSnapshot = "";
-let originalCategorySnapshot = "";
-
 let dragIndex = null;
 let dragColor = null;
 let dragBadIndex = null;
 let dragCategoryIndex = null;
 let startY = 0;
+
+let dragPressTimer = null;
+let pendingDragIndex = null;
+let pendingBadDragIndex = null;
+let dragStartY = 0;
+let dragLastY = 0;
+let dragActivated = false;
+let dragOriginalIndex = null;
+let dragOriginalBadPosition = null;
+let dragPreviewTargetPosition = null;
+let suppressClickUntil = 0;
 
 let calendarViewDate = new Date();
 calendarViewDate.setHours(0, 0, 0, 0);
@@ -1164,7 +1008,6 @@ function setCategoryValue(value) {
   if (value === "black") {
     display.value = "Нет";
     display.style.color = "#111111";
-    updateHabitSaveButton();
     return;
   }
 
@@ -1176,8 +1019,6 @@ function setCategoryValue(value) {
     display.value = categoryNames[value] || "Категория";
     display.style.color = getColorValue(value);
   }
-
-  updateHabitSaveButton();
 }
 
 function openCategoryPicker() {
@@ -1212,7 +1053,7 @@ function openCategoryPicker() {
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "picker-item add";
-  addBtn.textContent = "Добавить";
+  addBtn.textContent = "➕ Добавить";
   addBtn.onclick = () => {
     closeCategoryPicker();
     openNewCategoryModal();
@@ -1234,9 +1075,6 @@ function setColorValue(targetId, colorKey) {
   hidden.value = colorKey;
   display.value = getColorName(colorKey);
   display.style.color = getColorValue(colorKey);
-
-  if (targetId === "newCategoryColor") updateNewCategorySaveButton();
-  if (targetId === "categoryColor") updateCategorySaveButton();
 }
 
 function openColorPicker(targetId) {
@@ -1288,111 +1126,8 @@ function confirmDeleteCurrentHabit() {
   render();
 }
 
-
-
-
-function setViolationsDragPreview(isYesPreview) {
-  if (appSettings.showViolations !== isYesPreview) {
-    appSettings.showViolations = isYesPreview;
-    updateViolationsVisibility();
-    render();
-  }
-}
-
-function updateViolationsTogglePreview(isYesPreview) {
-  const toggle = document.querySelector("#settingsModal .toggle-two");
-  const noBtn = document.getElementById("violationsNoBtn");
-  const yesBtn = document.getElementById("violationsYesBtn");
-
-  if (!toggle || !noBtn || !yesBtn) return;
-
-  toggle.classList.toggle("drag-preview-no", !isYesPreview);
-  toggle.classList.toggle("drag-preview-yes", isYesPreview);
-
-  noBtn.classList.toggle("active", !isYesPreview);
-  yesBtn.classList.toggle("active", isYesPreview);
-}
-
-function clearViolationsTogglePreview() {
-  const toggle = document.querySelector("#settingsModal .toggle-two");
-  if (!toggle) return;
-
-  toggle.classList.remove("drag-preview-no", "drag-preview-yes");
-}
-
-let violationsToggleDrag = {
-  active: false,
-  moved: false,
-  rect: null
-};
-
-function initViolationsToggleDrag() {
-  const toggle = document.querySelector("#settingsModal .toggle-two");
-  if (!toggle || toggle.dataset.dragReady === "true") return;
-
-  toggle.dataset.dragReady = "true";
-
-  toggle.addEventListener("pointerdown", function(event) {
-    violationsToggleDrag.active = true;
-    violationsToggleDrag.moved = false;
-    violationsToggleDrag.rect = toggle.getBoundingClientRect();
-
-    toggle.classList.add("dragging");
-    toggle.setPointerCapture(event.pointerId);
-    toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
-    updateViolationsTogglePreview(appSettings.showViolations);
-  });
-
-  toggle.addEventListener("pointermove", function(event) {
-    if (!violationsToggleDrag.active || !violationsToggleDrag.rect) return;
-
-    event.preventDefault();
-    violationsToggleDrag.moved = true;
-
-    const rect = violationsToggleDrag.rect;
-    const position = (event.clientX - rect.left) / rect.width;
-    const shift = Math.max(0, Math.min(100, position * 200 - 50));
-    const isYesPreview = event.clientX >= rect.left + rect.width / 2;
-
-    toggle.style.setProperty("--toggle-shift", shift + "%");
-    updateViolationsTogglePreview(isYesPreview);
-    setViolationsDragPreview(isYesPreview);
-  }, { passive: false });
-
-  function finishDrag(event) {
-    if (!violationsToggleDrag.active || !violationsToggleDrag.rect) return;
-
-    const rect = violationsToggleDrag.rect;
-    const shouldBeYes = event.clientX >= rect.left + rect.width / 2;
-
-    violationsToggleDrag.active = false;
-    violationsToggleDrag.rect = null;
-
-    toggle.classList.remove("dragging");
-    clearViolationsTogglePreview();
-
-    if (event.pointerId !== undefined) {
-      try { toggle.releasePointerCapture(event.pointerId); } catch (e) {}
-    }
-
-    if (violationsToggleDrag.moved) {
-      setViolationsSetting(shouldBeYes);
-    } else {
-      updateSettingsUI();
-      updateViolationsVisibility();
-      render();
-    }
-
-    violationsToggleDrag.moved = false;
-  }
-
-  toggle.addEventListener("pointerup", finishDrag);
-  toggle.addEventListener("pointercancel", finishDrag);
-}
-
 function openSettingsModal() {
   updateSettingsUI();
-  initViolationsToggleDrag();
   showModal("settingsModal");
 }
 
@@ -1416,12 +1151,6 @@ function updateSettingsUI() {
 
   noBtn.classList.toggle("active", !appSettings.showViolations);
   yesBtn.classList.toggle("active", appSettings.showViolations);
-
-  const toggle = noBtn.closest(".toggle-two");
-  if (toggle) {
-    toggle.classList.toggle("yes", appSettings.showViolations);
-    toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
-  }
 }
 
 function updateViolationsVisibility() {
@@ -1429,220 +1158,6 @@ function updateViolationsVisibility() {
   if (!row) return;
 
   row.style.display = (appSettings.showViolations && currentHabitType === "bad" && editingIndex !== null) ? "flex" : "none";
-}
-
-
-
-let habitTypeToggleDrag = {
-  active: false,
-  moved: false,
-  rect: null
-};
-
-function updateHabitTypeToggleUI(typePreview = currentHabitType) {
-  const switcher = document.querySelector("#modal .type-switch");
-  const goodBtn = document.getElementById("goodTypeBtn");
-  const badBtn = document.getElementById("badTypeBtn");
-
-  if (!switcher || !goodBtn || !badBtn) return;
-
-  const isBad = typePreview === "bad";
-
-  switcher.classList.toggle("bad", isBad);
-  switcher.style.setProperty("--habit-type-shift", isBad ? "100%" : "0%");
-
-  goodBtn.classList.toggle("active", !isBad);
-  badBtn.classList.toggle("active", isBad);
-}
-
-
-function updateHabitTypeFieldsOnly() {
-  const goodFields = document.getElementById("goodFields");
-  const badFields = document.getElementById("badFields");
-
-  if (!goodFields || !badFields) return;
-
-  goodFields.style.display = currentHabitType === "good" ? "block" : "none";
-  badFields.style.display = currentHabitType === "bad" ? "block" : "none";
-
-  if (currentHabitType === "bad") {
-    if (!document.getElementById("quitDate").value) setQuitDateValue(todayKey());
-    updateRefusalInfo();
-  } else {
-    hideQuitCalendar();
-  }
-
-  updateViolationsVisibility();
-  updateHabitSaveButton();
-}
-
-function setHabitTypeDragPreview(typePreview) {
-  if (editingIndex !== null) return;
-
-  if (currentHabitType !== typePreview) {
-    currentHabitType = typePreview;
-    updateHabitTypeFieldsOnly();
-  }
-}
-
-function updateHabitTypeTogglePreview(typePreview) {
-  const switcher = document.querySelector("#modal .type-switch");
-  const goodBtn = document.getElementById("goodTypeBtn");
-  const badBtn = document.getElementById("badTypeBtn");
-
-  if (!switcher || !goodBtn || !badBtn) return;
-
-  const isBad = typePreview === "bad";
-
-  switcher.classList.toggle("drag-preview-good", !isBad);
-  switcher.classList.toggle("drag-preview-bad", isBad);
-
-  goodBtn.classList.toggle("active", !isBad);
-  badBtn.classList.toggle("active", isBad);
-}
-
-function clearHabitTypeTogglePreview() {
-  const switcher = document.querySelector("#modal .type-switch");
-  if (!switcher) return;
-  switcher.classList.remove("drag-preview-good", "drag-preview-bad");
-}
-
-function initHabitTypeToggleDrag() {
-  const switcher = document.querySelector("#modal .type-switch");
-  if (!switcher || switcher.dataset.dragReady === "true") return;
-
-  switcher.dataset.dragReady = "true";
-
-  switcher.addEventListener("pointerdown", function(event) {
-    if (editingIndex !== null) return;
-
-    habitTypeToggleDrag.active = true;
-    habitTypeToggleDrag.moved = false;
-    habitTypeToggleDrag.rect = switcher.getBoundingClientRect();
-
-    switcher.classList.add("dragging");
-    switcher.setPointerCapture(event.pointerId);
-    switcher.style.setProperty("--habit-type-shift", currentHabitType === "bad" ? "100%" : "0%");
-    updateHabitTypeTogglePreview(currentHabitType);
-  });
-
-  switcher.addEventListener("pointermove", function(event) {
-    if (!habitTypeToggleDrag.active || !habitTypeToggleDrag.rect) return;
-
-    event.preventDefault();
-    habitTypeToggleDrag.moved = true;
-
-    const rect = habitTypeToggleDrag.rect;
-    const position = (event.clientX - rect.left) / rect.width;
-    const shift = Math.max(0, Math.min(100, position * 200 - 50));
-    const previewType = event.clientX >= rect.left + rect.width / 2 ? "bad" : "good";
-
-    switcher.style.setProperty("--habit-type-shift", shift + "%");
-    updateHabitTypeTogglePreview(previewType);
-    setHabitTypeDragPreview(previewType);
-  }, { passive: false });
-
-  function finishDrag(event) {
-    if (!habitTypeToggleDrag.active || !habitTypeToggleDrag.rect) return;
-
-    const rect = habitTypeToggleDrag.rect;
-    const finalType = event.clientX >= rect.left + rect.width / 2 ? "bad" : "good";
-
-    habitTypeToggleDrag.active = false;
-    habitTypeToggleDrag.rect = null;
-
-    switcher.classList.remove("dragging");
-    clearHabitTypeTogglePreview();
-
-    if (event.pointerId !== undefined) {
-      try { switcher.releasePointerCapture(event.pointerId); } catch (e) {}
-    }
-
-    if (habitTypeToggleDrag.moved) {
-      currentHabitType = finalType;
-      updateHabitTypeUI(false);
-      updateHabitSaveButton();
-    } else {
-      updateHabitTypeToggleUI();
-    }
-
-    habitTypeToggleDrag.moved = false;
-  }
-
-  switcher.addEventListener("pointerup", finishDrag);
-  switcher.addEventListener("pointercancel", finishDrag);
-}
-
-function getHabitFormSnapshot() {
-  return JSON.stringify({
-    type: currentHabitType,
-    title: document.getElementById("habitTitle")?.value.trim() || "",
-    description: document.getElementById("habitDescription")?.value.trim() || "",
-    color: document.getElementById("habitColor")?.value || "black",
-    quitDate: document.getElementById("quitDate")?.value || todayKey(),
-    violations: Number(document.getElementById("violationCount")?.textContent) || 0
-  });
-}
-
-function updateHabitSaveButton() {
-  const button = document.getElementById("saveHabitButton");
-  if (!button) return;
-
-  const title = document.getElementById("habitTitle")?.value.trim() || "";
-  let disabled = !title;
-
-  if (!disabled && editingIndex !== null) {
-    disabled = getHabitFormSnapshot() === originalHabitSnapshot;
-  }
-
-  button.disabled = disabled;
-  button.classList.toggle("disabled-save", disabled);
-}
-
-function getCategoryFormSnapshot() {
-  return JSON.stringify({
-    name: document.getElementById("categoryTitleInput")?.value.trim() || "",
-    color: document.getElementById("categoryColor")?.value || "black"
-  });
-}
-
-function updateCategorySaveButton() {
-  const button = document.getElementById("saveCategoryButton");
-  if (!button) return;
-
-  const name = document.getElementById("categoryTitleInput")?.value.trim() || "";
-  const disabled = !name || getCategoryFormSnapshot() === originalCategorySnapshot;
-
-  button.disabled = disabled;
-  button.classList.toggle("disabled-save", disabled);
-}
-
-function updateNewCategorySaveButton() {
-  const button = document.getElementById("saveNewCategoryButton");
-  if (!button) return;
-
-  const name = document.getElementById("newCategoryName")?.value.trim() || "";
-  const disabled = !name;
-
-  button.disabled = disabled;
-  button.classList.toggle("disabled-save", disabled);
-}
-
-function getSortableCategoryOrder() {
-  const existingIds = customCategories.map(cat => cat.id);
-  const saved = Array.isArray(categoryOrder) ? categoryOrder : [];
-  const sortable = saved.filter(id => id !== "black" && existingIds.includes(id));
-
-  existingIds.forEach(id => {
-    if (!sortable.includes(id)) sortable.push(id);
-  });
-
-  categoryOrder = ["black", ...sortable];
-  return sortable;
-}
-
-function getCategorySortIndex(categoryId) {
-  return getSortableCategoryOrder().indexOf(categoryId);
 }
 
 function normalizeHabits() {
@@ -1659,7 +1174,6 @@ normalizeHabits();
 function save() {
   localStorage.setItem("habits", JSON.stringify(habits));
   localStorage.setItem("categoryNames", JSON.stringify(categoryNames));
-  getSortableCategoryOrder();
   localStorage.setItem("categoryOrder", JSON.stringify(categoryOrder));
   localStorage.setItem("collapsedCategories", JSON.stringify(collapsedCategories));
   localStorage.setItem("appSettings", JSON.stringify(appSettings));
@@ -1684,13 +1198,6 @@ function daysSince(dateKey) {
   today.setHours(0, 0, 0, 0);
   const diff = today - start;
   return Math.max(0, Math.floor(diff / 86400000));
-}
-
-function violationWord(n) {
-  n = Math.abs(Number(n)) || 0;
-  if (n % 10 === 1 && n % 100 !== 11) return "раз";
-  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return "раза";
-  return "раз";
 }
 
 function dayWord(n) {
@@ -1745,12 +1252,19 @@ function isGoodHabit(habit) {
 function getCategoryListForRender() {
   const list = [{ id: "black", name: "", color: "black" }];
 
-  const orderedIds = getSortableCategoryOrder();
+  const usedOldColors = ["red", "green", "blue"].filter(colorKey =>
+    habits.some(habit => isGoodHabit(habit) && habit.color === colorKey)
+  );
 
-  orderedIds.forEach(categoryId => {
-    const cat = customCategories.find(item => item.id === categoryId);
-    if (!cat) return;
+  usedOldColors.forEach(colorKey => {
+    list.push({
+      id: colorKey,
+      name: categoryNames[colorKey] || "Категория",
+      color: colorKey
+    });
+  });
 
+  customCategories.forEach(cat => {
     const hasHabits = habits.some(habit => isGoodHabit(habit) && habit.color === cat.id);
     if (hasHabits) {
       list.push({
@@ -1808,9 +1322,9 @@ function render() {
 
     if (categoryKey !== "black") {
       leftList.innerHTML += `
-        <div class="category-left" data-category-index="${getCategorySortIndex(categoryKey)}" style="color:${color}"
+        <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
           onclick="openCategoryModal('${categoryKey}')"
-          ontouchstart="startCategoryDrag(event, getCategorySortIndex('${categoryKey}'))"
+          ontouchstart="startCategoryDrag(event, ${categoryIndex})"
           ontouchmove="moveCategoryDrag(event)"
           ontouchend="endCategoryDrag(event)">
           <div class="category-title">${category.name}</div>
@@ -1840,7 +1354,7 @@ function render() {
         </div>
       `;
 
-      let row = `<div class="check-row" style="--habit-color:${color}">`;
+      let row = `<div class="check-row" data-check-index="${habitIndex}" style="--habit-color:${color}">`;
 
       dates.forEach(date => {
         const done = habit.done && habit.done[date.key];
@@ -1867,7 +1381,7 @@ function render() {
           ontouchend="endBadDrag(event)">${habit.title}</div>
         <div class="bad-status">
           <div>Вы отказались ${count} ${dayWord(count)} назад</div>
-          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} ${violationWord(habit.violations || 0)}</div>` : ""}
+          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} раз</div>` : ""}
         </div>
       </div>
     `;
@@ -1891,7 +1405,6 @@ function toggleCategory(event, colorKey) {
 }
 
 function startCategoryDrag(event, index) {
-  if (index < 0) return;
   dragCategoryIndex = index;
   startY = event.touches[0].clientY;
   const row = document.querySelector(`[data-category-index="${index}"]`);
@@ -1904,14 +1417,11 @@ function moveCategoryDrag(event) {
 
   const currentY = event.touches[0].clientY;
   const diff = currentY - startY;
-  const sortable = getSortableCategoryOrder();
 
-  if (diff > 34 && dragCategoryIndex < sortable.length - 1) {
-    const temp = sortable[dragCategoryIndex];
-    sortable[dragCategoryIndex] = sortable[dragCategoryIndex + 1];
-    sortable[dragCategoryIndex + 1] = temp;
-
-    categoryOrder = ["black", ...sortable];
+  if (diff > 34 && dragCategoryIndex < categoryOrder.length - 1) {
+    const temp = categoryOrder[dragCategoryIndex];
+    categoryOrder[dragCategoryIndex] = categoryOrder[dragCategoryIndex + 1];
+    categoryOrder[dragCategoryIndex + 1] = temp;
     dragCategoryIndex++;
     startY = currentY;
     save();
@@ -1919,11 +1429,9 @@ function moveCategoryDrag(event) {
   }
 
   if (diff < -34 && dragCategoryIndex > 0) {
-    const temp = sortable[dragCategoryIndex];
-    sortable[dragCategoryIndex] = sortable[dragCategoryIndex - 1];
-    sortable[dragCategoryIndex - 1] = temp;
-
-    categoryOrder = ["black", ...sortable];
+    const temp = categoryOrder[dragCategoryIndex];
+    categoryOrder[dragCategoryIndex] = categoryOrder[dragCategoryIndex - 1];
+    categoryOrder[dragCategoryIndex - 1] = temp;
     dragCategoryIndex--;
     startY = currentY;
     save();
@@ -1936,113 +1444,333 @@ function endCategoryDrag() {
   document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
 }
 
+
+function getGoodDragRows(index) {
+  return [
+    document.querySelector(`[data-index="${index}"]`),
+    document.querySelector(`[data-check-index="${index}"]`)
+  ].filter(Boolean);
+}
+
+function addGoodDragClass(index, className) {
+  getGoodDragRows(index).forEach(row => row.classList.add(className));
+}
+
+function removeGoodDragClass(index, className) {
+  getGoodDragRows(index).forEach(row => row.classList.remove(className));
+}
+
+function setGoodDragY(index, value) {
+  getGoodDragRows(index).forEach(row => row.style.setProperty("--drag-y", value));
+}
+
+function clearSortPreview() {
+  document.querySelectorAll(".sort-shift-up, .sort-shift-down").forEach(row => {
+    row.classList.remove("sort-shift-up", "sort-shift-down");
+  });
+}
+
+function clearGoodDragStyles() {
+  document.querySelectorAll(".habit-left, .check-row").forEach(row => {
+    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
+    row.style.removeProperty("--drag-y");
+  });
+}
+
+function getSameColorIndexesForDrag() {
+  return habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => isGoodHabit(item.habit) && item.habit.color === dragColor)
+    .map(item => item.index);
+}
+
+function showGoodSortPreview(targetPosition) {
+  clearSortPreview();
+
+  if (dragOriginalIndex === null) return;
+
+  const sameColorIndexes = getSameColorIndexesForDrag();
+  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
+
+  if (fromPosition === -1 || targetPosition === fromPosition) return;
+
+  if (targetPosition > fromPosition) {
+    for (let position = fromPosition + 1; position <= targetPosition; position++) {
+      const index = sameColorIndexes[position];
+      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-up"));
+    }
+  } else {
+    for (let position = targetPosition; position < fromPosition; position++) {
+      const index = sameColorIndexes[position];
+      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-down"));
+    }
+  }
+}
+
 function startDrag(event, index) {
   if (!isGoodHabit(habits[index])) return;
-  dragIndex = index;
+
+  pendingDragIndex = index;
+  dragOriginalIndex = index;
+  dragIndex = null;
   dragColor = habits[index].color;
-  startY = event.touches[0].clientY;
-  const row = document.querySelector(`[data-index="${index}"]`);
-  if (row) row.classList.add("dragging");
+  dragActivated = false;
+  dragStartY = event.touches[0].clientY;
+  dragLastY = dragStartY;
+  startY = dragStartY;
+  dragPreviewTargetPosition = null;
+
+  clearTimeout(dragPressTimer);
+  addGoodDragClass(index, "drag-press");
+
+  dragPressTimer = setTimeout(() => {
+    dragIndex = pendingDragIndex;
+    dragActivated = true;
+
+    removeGoodDragClass(dragIndex, "drag-press");
+    addGoodDragClass(dragIndex, "dragging");
+    setGoodDragY(dragIndex, "0px");
+
+    if (navigator.vibrate) navigator.vibrate(12);
+  }, 180);
 }
 
 function moveDrag(event) {
-  event.preventDefault();
-  if (dragIndex === null) return;
-
   const currentY = event.touches[0].clientY;
-  const diff = currentY - startY;
+  dragLastY = currentY;
+  const totalDiff = currentY - dragStartY;
 
-  if (diff > 42) {
-    moveWithinCategory(1);
-    startY = currentY;
+  if (!dragActivated) {
+    if (Math.abs(totalDiff) > 10) {
+      clearTimeout(dragPressTimer);
+      clearGoodDragStyles();
+      pendingDragIndex = null;
+      dragOriginalIndex = null;
+      dragColor = null;
+    }
+    return;
   }
 
-  if (diff < -42) {
-    moveWithinCategory(-1);
-    startY = currentY;
+  event.preventDefault();
+  if (dragIndex === null || dragOriginalIndex === null) return;
+
+  setGoodDragY(dragIndex, `${totalDiff}px`);
+
+  const sameColorIndexes = getSameColorIndexesForDrag();
+  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
+  if (fromPosition === -1) return;
+
+  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+  const moveSteps = Math.round(totalDiff / rowStep);
+  const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
+
+  if (targetPosition !== dragPreviewTargetPosition) {
+    dragPreviewTargetPosition = targetPosition;
+    showGoodSortPreview(targetPosition);
   }
 }
 
 function moveWithinCategory(direction) {
-  const sameColorIndexes = habits
-    .map((habit, index) => ({ habit, index }))
-    .filter(item => isGoodHabit(item.habit) && item.habit.color === dragColor)
-    .map(item => item.index);
-
-  const currentPosition = sameColorIndexes.indexOf(dragIndex);
-  const targetPosition = currentPosition + direction;
-  if (targetPosition < 0 || targetPosition >= sameColorIndexes.length) return;
-
-  const targetIndex = sameColorIndexes[targetPosition];
-  const temp = habits[dragIndex];
-  habits[dragIndex] = habits[targetIndex];
-  habits[targetIndex] = temp;
-  dragIndex = targetIndex;
-
-  save();
-  render();
-
-  const row = document.querySelector(`[data-index="${dragIndex}"]`);
-  if (row) row.classList.add("dragging");
+  // Во время движения больше не делаем render().
+  // Соседние строки двигаются визуально через showGoodSortPreview().
 }
 
-function endDrag() {
+function endDrag(event) {
+  clearTimeout(dragPressTimer);
+
+  const wasDragged = dragActivated;
+  const originalIndex = dragOriginalIndex;
+  const color = dragColor;
+  let changed = false;
+
+  if (wasDragged) {
+    suppressClickUntil = Date.now() + 350;
+  }
+
+  if (wasDragged && originalIndex !== null && habits[originalIndex]) {
+    const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
+    const totalDiff = finalY - dragStartY;
+    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+
+    const sameColorIndexes = habits
+      .map((habit, index) => ({ habit, index }))
+      .filter(item => isGoodHabit(item.habit) && item.habit.color === color)
+      .map(item => item.index);
+
+    const fromPosition = sameColorIndexes.indexOf(originalIndex);
+
+    if (fromPosition !== -1) {
+      const moveSteps = Math.round(totalDiff / rowStep);
+      const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
+
+      if (targetPosition !== fromPosition) {
+        const targetIndex = sameColorIndexes[targetPosition];
+        const [movedHabit] = habits.splice(originalIndex, 1);
+        habits.splice(targetIndex, 0, movedHabit);
+        changed = true;
+      }
+    }
+  }
+
   dragIndex = null;
+  pendingDragIndex = null;
+  dragOriginalIndex = null;
   dragColor = null;
-  document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("dragging"));
+  dragActivated = false;
+  dragPreviewTargetPosition = null;
+  dragLastY = 0;
+
+  clearGoodDragStyles();
+
+  if (changed) {
+    save();
+    render();
+  }
 }
 
 function startBadDrag(event, badPosition) {
-  dragBadIndex = badPosition;
-  startY = event.touches[0].clientY;
+  pendingBadDragIndex = badPosition;
+  dragOriginalBadPosition = badPosition;
+  dragBadIndex = null;
+  dragActivated = false;
+  dragStartY = event.touches[0].clientY;
+  dragLastY = dragStartY;
+  startY = dragStartY;
+  dragPreviewTargetPosition = null;
+
+  clearTimeout(dragPressTimer);
+
   const row = document.querySelector(`[data-bad-index="${badPosition}"]`);
-  if (row) row.classList.add("dragging");
+  if (row) row.classList.add("drag-press");
+
+  dragPressTimer = setTimeout(() => {
+    dragBadIndex = pendingBadDragIndex;
+    dragActivated = true;
+
+    const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+    if (activeRow) {
+      activeRow.classList.remove("drag-press");
+      activeRow.classList.add("dragging");
+      activeRow.style.setProperty("--drag-y", "0px");
+    }
+
+    if (navigator.vibrate) navigator.vibrate(12);
+  }, 180);
+}
+
+function getBadIndexesForDrag() {
+  return habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => item.habit.type === "bad")
+    .map(item => item.index);
+}
+
+function clearBadDragStyles() {
+  document.querySelectorAll(".bad-habit-row").forEach(row => {
+    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
+    row.style.removeProperty("--drag-y");
+  });
+}
+
+function showBadSortPreview(targetPosition) {
+  clearSortPreview();
+
+  const fromPosition = dragOriginalBadPosition;
+  if (fromPosition === null || targetPosition === fromPosition) return;
+
+  if (targetPosition > fromPosition) {
+    for (let position = fromPosition + 1; position <= targetPosition; position++) {
+      document.querySelector(`[data-bad-index="${position}"]`)?.classList.add("sort-shift-up");
+    }
+  } else {
+    for (let position = targetPosition; position < fromPosition; position++) {
+      document.querySelector(`[data-bad-index="${position}"]`)?.classList.add("sort-shift-down");
+    }
+  }
 }
 
 function moveBadDrag(event) {
-  event.preventDefault();
-  if (dragBadIndex === null) return;
-
   const currentY = event.touches[0].clientY;
-  const diff = currentY - startY;
+  dragLastY = currentY;
+  const totalDiff = currentY - dragStartY;
 
-  if (diff > 42) {
-    moveBadHabit(1);
-    startY = currentY;
+  if (!dragActivated) {
+    if (Math.abs(totalDiff) > 10) {
+      clearTimeout(dragPressTimer);
+      clearBadDragStyles();
+      pendingBadDragIndex = null;
+      dragOriginalBadPosition = null;
+    }
+    return;
   }
 
-  if (diff < -42) {
-    moveBadHabit(-1);
-    startY = currentY;
+  event.preventDefault();
+  if (dragBadIndex === null || dragOriginalBadPosition === null) return;
+
+  const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+  if (activeRow) activeRow.style.setProperty("--drag-y", `${totalDiff}px`);
+
+  const badIndexes = getBadIndexesForDrag();
+  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+  const moveSteps = Math.round(totalDiff / rowStep);
+  const targetPosition = Math.max(0, Math.min(badIndexes.length - 1, dragOriginalBadPosition + moveSteps));
+
+  if (targetPosition !== dragPreviewTargetPosition) {
+    dragPreviewTargetPosition = targetPosition;
+    showBadSortPreview(targetPosition);
   }
 }
 
 function moveBadHabit(direction) {
-  const badIndexes = habits
-    .map((habit, index) => ({ habit, index }))
-    .filter(item => item.habit.type === "bad")
-    .map(item => item.index);
-
-  const currentHabitIndex = badIndexes[dragBadIndex];
-  const targetBadPosition = dragBadIndex + direction;
-  if (targetBadPosition < 0 || targetBadPosition >= badIndexes.length) return;
-
-  const targetHabitIndex = badIndexes[targetBadPosition];
-  const temp = habits[currentHabitIndex];
-  habits[currentHabitIndex] = habits[targetHabitIndex];
-  habits[targetHabitIndex] = temp;
-  dragBadIndex = targetBadPosition;
-
-  save();
-  render();
-
-  const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-  if (row) row.classList.add("dragging");
+  // Во время движения больше не делаем render().
+  // Соседние строки двигаются визуально через showBadSortPreview().
 }
 
-function endBadDrag() {
+function endBadDrag(event) {
+  clearTimeout(dragPressTimer);
+
+  const wasDragged = dragActivated;
+  const originalBadPosition = dragOriginalBadPosition;
+  let changed = false;
+
+  if (wasDragged) {
+    suppressClickUntil = Date.now() + 350;
+  }
+
+  if (wasDragged && originalBadPosition !== null) {
+    const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
+    const totalDiff = finalY - dragStartY;
+    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+
+    const badIndexes = getBadIndexesForDrag();
+    const targetBadPosition = Math.max(
+      0,
+      Math.min(badIndexes.length - 1, originalBadPosition + Math.round(totalDiff / rowStep))
+    );
+
+    if (targetBadPosition !== originalBadPosition) {
+      const currentHabitIndex = badIndexes[originalBadPosition];
+      const targetHabitIndex = badIndexes[targetBadPosition];
+
+      const [movedHabit] = habits.splice(currentHabitIndex, 1);
+      habits.splice(targetHabitIndex, 0, movedHabit);
+      changed = true;
+    }
+  }
+
   dragBadIndex = null;
-  document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("dragging"));
+  pendingBadDragIndex = null;
+  dragOriginalBadPosition = null;
+  dragActivated = false;
+  dragPreviewTargetPosition = null;
+  dragLastY = 0;
+
+  clearBadDragStyles();
+
+  if (changed) {
+    save();
+    render();
+  }
 }
 
 function toggleHabit(habitIndex, dateKey) {
@@ -2067,13 +1795,10 @@ function updateHabitTypeUI(disabled) {
   const goodFields = document.getElementById("goodFields");
   const badFields = document.getElementById("badFields");
 
+  goodBtn.classList.toggle("active", currentHabitType === "good");
+  badBtn.classList.toggle("active", currentHabitType === "bad");
   goodBtn.disabled = disabled;
   badBtn.disabled = disabled;
-
-  const typeSwitch = goodBtn.closest(".type-switch");
-  if (typeSwitch) typeSwitch.classList.toggle("disabled", disabled);
-
-  updateHabitTypeToggleUI();
 
   goodFields.style.display = currentHabitType === "good" ? "block" : "none";
   badFields.style.display = currentHabitType === "bad" ? "block" : "none";
@@ -2089,13 +1814,11 @@ function updateHabitTypeUI(disabled) {
 }
 
 function openModal() {
-  initHabitTypeToggleDrag();
   editingIndex = null;
   currentHabitType = "good";
 
   document.getElementById("modalTitle").textContent = "Новая привычка";
   document.getElementById("habitTitle").value = "";
-  updateHabitTitleCounter();
   document.getElementById("habitDescription").value = "";
   document.getElementById("habitDescription").style.height = "74px";
   updateDescriptionCounter();
@@ -2105,9 +1828,6 @@ function openModal() {
   updateViolationsVisibility();
   document.getElementById("deleteButton").style.display = "none";
 
-  originalHabitSnapshot = "";
-  updateHabitSaveButton();
-
   updateHabitTypeUI(false);
   updateRefusalInfo();
 
@@ -2115,7 +1835,6 @@ function openModal() {
 }
 
 function editHabit(index) {
-  initHabitTypeToggleDrag();
   if (dragIndex !== null || dragBadIndex !== null) return;
 
   editingIndex = index;
@@ -2123,7 +1842,6 @@ function editHabit(index) {
 
   document.getElementById("modalTitle").textContent = "Редактировать привычку";
   document.getElementById("habitTitle").value = habits[index].title;
-  updateHabitTitleCounter();
   document.getElementById("habitDescription").value = habits[index].description || "";
   updateDescriptionCounter();
   setCategoryValue(habits[index].color || "black");
@@ -2133,9 +1851,6 @@ function editHabit(index) {
   document.getElementById("deleteButton").style.display = "block";
 
   updateHabitTypeUI(true);
-
-  originalHabitSnapshot = getHabitFormSnapshot();
-  updateHabitSaveButton();
 
   showModal("modal");
 
@@ -2217,12 +1932,8 @@ function openCategoryModal(colorKey) {
   const customCategory = customCategories.find(cat => cat.id === colorKey);
   document.getElementById("categoryTitleInput").value =
     customCategory ? customCategory.name : (categoryNames[colorKey] || "Категория");
-  updateCategoryTitleCounter();
 
   setColorValue("categoryColor", customCategory ? (customCategory.color || "black") : colorKey);
-
-  originalCategorySnapshot = getCategoryFormSnapshot();
-  updateCategorySaveButton();
 
   showModal("categoryModal");
 }
@@ -2277,31 +1988,6 @@ function closeCategoryDeleteChoice() {
   hideModal("categoryDeleteChoiceModal");
 }
 
-
-function updateHabitTitleCounter() {
-  const input = document.getElementById("habitTitle");
-  const counter = document.getElementById("habitTitleCounter");
-  if (!input || !counter) return;
-  if (input.value.length > 50) input.value = input.value.slice(0, 50);
-  counter.textContent = `${input.value.length}/50`;
-}
-
-function updateNewCategoryCounter() {
-  const input = document.getElementById("newCategoryName");
-  const counter = document.getElementById("newCategoryCounter");
-  if (!input || !counter) return;
-  if (input.value.length > 50) input.value = input.value.slice(0, 50);
-  counter.textContent = `${input.value.length}/50`;
-}
-
-function updateCategoryTitleCounter() {
-  const input = document.getElementById("categoryTitleInput");
-  const counter = document.getElementById("categoryTitleCounter");
-  if (!input || !counter) return;
-  if (input.value.length > 50) input.value = input.value.slice(0, 50);
-  counter.textContent = `${input.value.length}/50`;
-}
-
 function updateDescriptionCounter() {
   const textarea = document.getElementById("habitDescription");
   if (textarea.value.length > 1000) textarea.value = textarea.value.slice(0, 1000);
@@ -2342,7 +2028,6 @@ function setQuitDateValue(dateKey) {
 
   updateRefusalInfo();
   renderQuitCalendar();
-  updateHabitSaveButton();
 }
 
 function updateRefusalInfo() {
@@ -2430,7 +2115,6 @@ function setViolationsValue(value) {
 
   if (countEl) countEl.textContent = count;
   if (minusBtn) minusBtn.disabled = count <= 0;
-  updateHabitSaveButton();
 }
 
 function changeViolations(delta) {
@@ -2452,10 +2136,6 @@ function handleCategorySelect(sel){
 }
 
 function openNewCategoryModal(){
- document.getElementById('newCategoryName').value = "";
- updateNewCategoryCounter();
- setColorValue("newCategoryColor", "black");
- updateNewCategorySaveButton();
  showModal("newCategoryModal");
 }
 function closeNewCategoryModal(){
@@ -2476,14 +2156,6 @@ refreshCategorySelect();
 setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "black");
 setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
-initViolationsToggleDrag();
-initHabitTypeToggleDrag();
-updateHabitTitleCounter();
-updateNewCategoryCounter();
-updateCategoryTitleCounter();
-updateNewCategorySaveButton();
-updateCategorySaveButton();
-updateHabitSaveButton();
 
 render();
 </script>
