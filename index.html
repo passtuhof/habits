@@ -8,7 +8,7 @@
 :root {
   --left-width: 25vw;
   --day-width: 33px;
-  --row-height: 34px;
+  --row-height: 44px;
   --gap: 3px;
   --seven-days-width: calc(var(--day-width) * 7 + var(--gap) * 6);
 }
@@ -48,7 +48,7 @@ button {
 
 .empty-state {
   display: none;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   color: #777;
   padding: 20px 0;
@@ -198,8 +198,8 @@ button {
 }
 
 .cell {
-  width: 19px;
-  height: 19px;
+  width: 23px;
+  height: 23px;
   border: 1.5px solid var(--habit-color);
   border-radius: 7px;
   display: flex;
@@ -1201,31 +1201,6 @@ body.good-habit-dragging .habit-left.dragging {
 .habit-left.dragging *,
 .check-row.dragging * {
   opacity: 1 !important;
-}
-
-
-/* Непрозрачная карточка поверх всего при сортировке категорий и плохих привычек */
-.category-left.dragging,
-.bad-habit-row.dragging {
-  opacity: 1 !important;
-  background: #ffffff !important;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.18) !important;
-  position: relative !important;
-  z-index: 30000 !important;
-  isolation: isolate;
-}
-
-.category-left.dragging *,
-.bad-habit-row.dragging * {
-  opacity: 1 !important;
-  position: relative;
-  z-index: 30001;
-}
-
-/* Во время сортировки категорий и плохих привычек активный элемент выше всех соседних строк */
-body.category-dragging .category-left.dragging,
-body.bad-habit-dragging .bad-habit-row.dragging {
-  z-index: 30000 !important;
 }
 
 </style>
@@ -2289,7 +2264,6 @@ function clearCategorySortPreview() {
 }
 
 function clearCategoryDragStyles() {
-  document.body.classList.remove("category-dragging");
   document.querySelectorAll(".category-left").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
@@ -2382,7 +2356,6 @@ function startCategoryDrag(event, index) {
   categoryDragPressTimer = setTimeout(() => {
     dragCategoryIndex = pendingCategoryDragIndex;
     dragCategoryActivated = true;
-    document.body.classList.add("category-dragging");
 
     collapseAllVisibleCategoriesForDrag();
     render();
@@ -2582,9 +2555,9 @@ function getGoodDropPositionInCategory(categoryId, clientY) {
 
   if (!rows.length) return 0;
 
-  // Более ранний и отзывчивый сдвиг хороших привычек.
-  // Было 50% высоты строки, стало около 35% — ближе к ощущению сортировки плохих привычек.
-  const shiftTrigger = 0.35;
+  // Единый порог сортировки: 50% высоты строки.
+  // Так перенос внутри категории и между категориями ощущается одинаково.
+  const shiftTrigger = 0.5;
 
   for (let i = 0; i < rows.length; i++) {
     const rect = rows[i].getBoundingClientRect();
@@ -2911,16 +2884,24 @@ function endDrag(event) {
 
   if (wasDragged && originalIndex !== null && habits[originalIndex]) {
     const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const targetCategoryId = getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black";
+    const totalDiff = finalY - dragStartY;
+    const visualDrop = getGoodVisualDropInfo(finalY);
+    const targetCategoryId = visualDrop
+      ? (visualDrop.categoryId || window.dragTargetCategoryId || dragColor || "black")
+      : (getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black");
     const sourceCategoryId = dragColor || "black";
-    const targetPosition = getGoodDropPositionInCategory(targetCategoryId, finalY);
+    const targetPosition = visualDrop
+      ? visualDrop.targetPosition
+      : getGoodDropPositionInCategory(targetCategoryId, finalY);
 
     if (targetCategoryId === sourceCategoryId) {
       const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
       const fromPosition = sameColorIndexes.indexOf(originalIndex);
 
       if (fromPosition !== -1) {
-        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, targetPosition));
+        const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 34;
+        const moveSteps = Math.round(totalDiff / rowStep);
+        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
 
         if (finalPosition !== fromPosition) {
           const targetIndex = sameColorIndexes[finalPosition];
@@ -2930,9 +2911,8 @@ function endDrag(event) {
         }
       }
     } else {
-      const visualDrop = getGoodVisualDropInfo(finalY);
-      const finalTargetCategoryId = visualDrop ? (visualDrop.categoryId || targetCategoryId) : targetCategoryId;
-      const finalTargetPosition = visualDrop ? visualDrop.targetPosition : targetPosition;
+      const finalTargetCategoryId = targetCategoryId;
+      const finalTargetPosition = targetPosition;
 
       const [movedHabit] = habits.splice(originalIndex, 1);
       movedHabit.color = finalTargetCategoryId;
@@ -2980,7 +2960,6 @@ function startBadDrag(event, badPosition) {
   dragPressTimer = setTimeout(() => {
     dragBadIndex = pendingBadDragIndex;
     dragActivated = true;
-    document.body.classList.add("bad-habit-dragging");
 
     const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
     if (activeRow) {
@@ -3001,7 +2980,6 @@ function getBadIndexesForDrag() {
 }
 
 function clearBadDragStyles() {
-  document.body.classList.remove("bad-habit-dragging");
   document.querySelectorAll(".bad-habit-row").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
