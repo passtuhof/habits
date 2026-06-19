@@ -2074,7 +2074,7 @@ function render() {
 
     if (categoryKey !== "black") {
       leftList.innerHTML += `
-        <div class="category-left" data-category-index="${getVisibleCategorySortIndex(categoryKey)}" style="color:${color}"
+        <div class="category-left" data-category-index="${getVisibleCategorySortIndex(categoryKey)}" data-category-id="${categoryKey}" style="color:${color}"
           onclick="openCategoryModal('${categoryKey}')"
           ontouchstart="startCategoryDrag(event, getVisibleCategorySortIndex('${categoryKey}'))"
           ontouchmove="moveCategoryDrag(event)"
@@ -2095,7 +2095,7 @@ function render() {
       if (!isGoodHabit(habit) || (habit.color || "black") !== categoryKey) return;
 
       leftList.innerHTML += `
-        <div class="habit-left" data-index="${habitIndex}">
+        <div class="habit-left" data-index="${habitIndex}" data-category-id="${categoryKey}">
           <div class="name-wrap"
             onclick="editHabit(${habitIndex})"
             ontouchstart="startDrag(event, ${habitIndex})"
@@ -2106,7 +2106,7 @@ function render() {
         </div>
       `;
 
-      let row = `<div class="check-row" data-check-index="${habitIndex}" style="--habit-color:${color}">`;
+      let row = `<div class="check-row" data-check-index="${habitIndex}" data-category-id="${categoryKey}" style="--habit-color:${color}">`;
 
       dates.forEach(date => {
         const done = habit.done && habit.done[date.key];
@@ -2377,42 +2377,162 @@ function getSameColorIndexesForDrag() {
     .map(item => item.index);
 }
 
-
-function clampGoodDragDiff(totalDiff) {
-  if (dragOriginalIndex === null) return totalDiff;
-
-  const sameColorIndexes = getSameColorIndexesForDrag();
-  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
-  if (fromPosition === -1) return totalDiff;
-
-  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-  const minDiff = -fromPosition * rowStep;
-  const maxDiff = (sameColorIndexes.length - 1 - fromPosition) * rowStep;
-
-  return Math.max(minDiff, Math.min(maxDiff, totalDiff));
+function getGoodCategoryById(categoryId) {
+  if (categoryId === "black") return { id: "black", name: "", color: "black" };
+  return customCategories.find(category => category.id === categoryId) || null;
 }
 
-function showGoodSortPreview(targetPosition) {
+function getGoodCategoryColorValue(categoryId) {
+  const category = getGoodCategoryById(categoryId);
+  if (!category) return colorMap.black;
+  return colorMap[category.color || category.id] || colorMap.black;
+}
+
+function getGoodCategoryAtClientY(clientY) {
+  const leftList = document.getElementById("leftList");
+  if (!leftList) return dragColor || "black";
+
+  const children = Array.from(leftList.children).filter(child => {
+    if (!(child.classList.contains("category-left") || child.classList.contains("habit-left"))) return false;
+    if (child.classList.contains("habit-left") && Number(child.dataset.index) === dragOriginalIndex) return false;
+    return true;
+  });
+
+  if (!children.length) return dragColor || "black";
+
+  const firstCategoryIndex = children.findIndex(child => child.classList.contains("category-left"));
+
+  if (firstCategoryIndex > 0) {
+    const firstHabitRect = children[0].getBoundingClientRect();
+    const firstCategoryRect = children[firstCategoryIndex].getBoundingClientRect();
+    if (clientY >= firstHabitRect.top && clientY < firstCategoryRect.top) return "black";
+  }
+
+  let currentCategoryId = firstCategoryIndex === -1 ? "black" : null;
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    const rect = child.getBoundingClientRect();
+    const next = children[i + 1];
+    const nextTop = next ? next.getBoundingClientRect().top : rect.bottom + 9999;
+
+    if (child.classList.contains("category-left")) {
+      currentCategoryId = child.dataset.categoryId;
+    } else if (!currentCategoryId) {
+      currentCategoryId = child.dataset.categoryId || "black";
+    }
+
+    if (clientY >= rect.top && clientY < nextTop) {
+      return currentCategoryId || child.dataset.categoryId || dragColor || "black";
+    }
+  }
+
+  const last = children[children.length - 1];
+  if (clientY >= last.getBoundingClientRect().bottom) {
+    return last.dataset.categoryId || dragColor || "black";
+  }
+
+  return dragColor || "black";
+}
+
+function getGoodIndexesByCategory(categoryId, excludeIndex = null) {
+  return habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => isGoodHabit(item.habit) && (item.habit.color || "black") === categoryId && item.index !== excludeIndex)
+    .map(item => item.index);
+}
+
+function getGoodDropPositionInCategory(categoryId, clientY) {
+  const rows = Array.from(document.querySelectorAll(`.habit-left[data-category-id="${categoryId}"]`))
+    .filter(row => Number(row.dataset.index) !== dragOriginalIndex);
+
+  if (!rows.length) return 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const rect = rows[i].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) return i;
+  }
+
+  return rows.length;
+}
+
+function setActiveGoodDragColor(categoryId) {
+  const color = getGoodCategoryColorValue(categoryId);
+
+  const leftRow = document.querySelector(`[data-index="${dragIndex}"]`);
+  const checkRow = document.querySelector(`[data-check-index="${dragIndex}"]`);
+
+  if (leftRow) {
+    leftRow.dataset.categoryId = categoryId;
+    const name = leftRow.querySelector(".habit-name");
+    if (name) name.style.color = color;
+  }
+
+  if (checkRow) {
+    checkRow.dataset.categoryId = categoryId;
+    checkRow.style.setProperty("--habit-color", color);
+  }
+}
+
+function showGoodSortPreview(categoryId, targetPosition) {
   clearSortPreview();
 
   if (dragOriginalIndex === null) return;
 
-  const sameColorIndexes = getSameColorIndexesForDrag();
-  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
+  const sourceCategoryId = dragColor || "black";
 
-  if (fromPosition === -1 || targetPosition === fromPosition) return;
+  if (categoryId === sourceCategoryId) {
+    const sameColorIndexes = getGoodIndexesByCategory(categoryId);
+    const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
 
-  if (targetPosition > fromPosition) {
-    for (let position = fromPosition + 1; position <= targetPosition; position++) {
-      const index = sameColorIndexes[position];
-      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-up"));
+    if (fromPosition === -1 || targetPosition === fromPosition) return;
+
+    if (targetPosition > fromPosition) {
+      for (let position = fromPosition + 1; position <= targetPosition; position++) {
+        const index = sameColorIndexes[position];
+        getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-up"));
+      }
+    } else {
+      for (let position = targetPosition; position < fromPosition; position++) {
+        const index = sameColorIndexes[position];
+        getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-down"));
+      }
     }
-  } else {
-    for (let position = targetPosition; position < fromPosition; position++) {
-      const index = sameColorIndexes[position];
-      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-down"));
-    }
+    return;
   }
+
+  const targetIndexes = getGoodIndexesByCategory(categoryId, dragOriginalIndex);
+  for (let position = targetPosition; position < targetIndexes.length; position++) {
+    const index = targetIndexes[position];
+    getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-down"));
+  }
+}
+
+function getGlobalInsertIndexForGoodHabit(categoryId, targetPosition) {
+  const targetIndexes = getGoodIndexesByCategory(categoryId);
+
+  if (targetIndexes.length) {
+    if (targetPosition <= 0) return targetIndexes[0];
+    if (targetPosition >= targetIndexes.length) return targetIndexes[targetIndexes.length - 1] + 1;
+    return targetIndexes[targetPosition];
+  }
+
+  const renderCategories = getCategoryListForRender().map(category => category.id);
+  const targetCategoryPosition = renderCategories.indexOf(categoryId);
+
+  if (targetCategoryPosition === -1) return habits.length;
+
+  for (let i = targetCategoryPosition + 1; i < renderCategories.length; i++) {
+    const nextIndexes = getGoodIndexesByCategory(renderCategories[i]);
+    if (nextIndexes.length) return nextIndexes[0];
+  }
+
+  for (let i = targetCategoryPosition - 1; i >= 0; i--) {
+    const prevIndexes = getGoodIndexesByCategory(renderCategories[i]);
+    if (prevIndexes.length) return prevIndexes[prevIndexes.length - 1] + 1;
+  }
+
+  return habits.length;
 }
 
 function startDrag(event, index) {
@@ -2421,12 +2541,13 @@ function startDrag(event, index) {
   pendingDragIndex = index;
   dragOriginalIndex = index;
   dragIndex = null;
-  dragColor = habits[index].color;
+  dragColor = habits[index].color || "black";
   dragActivated = false;
   dragStartY = event.touches[0].clientY;
   dragLastY = dragStartY;
   startY = dragStartY;
   dragPreviewTargetPosition = null;
+  window.dragTargetCategoryId = dragColor;
 
   clearTimeout(dragPressTimer);
   addGoodDragClass(index, "drag-press");
@@ -2438,6 +2559,7 @@ function startDrag(event, index) {
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
     setGoodDragY(dragIndex, "0px");
+    setActiveGoodDragColor(dragColor);
 
     if (navigator.vibrate) navigator.vibrate(12);
   }, 180);
@@ -2455,6 +2577,7 @@ function moveDrag(event) {
       pendingDragIndex = null;
       dragOriginalIndex = null;
       dragColor = null;
+      window.dragTargetCategoryId = null;
     }
     return;
   }
@@ -2462,20 +2585,18 @@ function moveDrag(event) {
   event.preventDefault();
   if (dragIndex === null || dragOriginalIndex === null) return;
 
-  const clampedDiff = clampGoodDragDiff(totalDiff);
-  setGoodDragY(dragIndex, `${clampedDiff}px`);
+  setGoodDragY(dragIndex, `${totalDiff}px`);
 
-  const sameColorIndexes = getSameColorIndexesForDrag();
-  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
-  if (fromPosition === -1) return;
+  const targetCategoryId = getGoodCategoryAtClientY(currentY) || dragColor || "black";
+  const targetPosition = getGoodDropPositionInCategory(targetCategoryId, currentY);
 
-  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-  const moveSteps = Math.round(clampedDiff / rowStep);
-  const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
+  window.dragTargetCategoryId = targetCategoryId;
+  setActiveGoodDragColor(targetCategoryId);
 
-  if (targetPosition !== dragPreviewTargetPosition) {
-    dragPreviewTargetPosition = targetPosition;
-    showGoodSortPreview(targetPosition);
+  const previewKey = `${targetCategoryId}:${targetPosition}`;
+  if (previewKey !== dragPreviewTargetPosition) {
+    dragPreviewTargetPosition = previewKey;
+    showGoodSortPreview(targetCategoryId, targetPosition);
   }
 }
 
@@ -2489,7 +2610,6 @@ function endDrag(event) {
 
   const wasDragged = dragActivated;
   const originalIndex = dragOriginalIndex;
-  const color = dragColor;
   let changed = false;
 
   if (wasDragged) {
@@ -2498,29 +2618,33 @@ function endDrag(event) {
 
   if (wasDragged && originalIndex !== null && habits[originalIndex]) {
     const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const totalDiff = finalY - dragStartY;
-    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+    const targetCategoryId = getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black";
+    const sourceCategoryId = dragColor || "black";
+    const targetPosition = getGoodDropPositionInCategory(targetCategoryId, finalY);
 
-    const sameColorIndexes = habits
-      .map((habit, index) => ({ habit, index }))
-      .filter(item => isGoodHabit(item.habit) && item.habit.color === color)
-      .map(item => item.index);
+    if (targetCategoryId === sourceCategoryId) {
+      const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
+      const fromPosition = sameColorIndexes.indexOf(originalIndex);
 
-    const fromPosition = sameColorIndexes.indexOf(originalIndex);
+      if (fromPosition !== -1) {
+        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, targetPosition));
 
-    if (fromPosition !== -1) {
-      const minDiff = -fromPosition * rowStep;
-      const maxDiff = (sameColorIndexes.length - 1 - fromPosition) * rowStep;
-      const clampedDiff = Math.max(minDiff, Math.min(maxDiff, totalDiff));
-      const moveSteps = Math.round(clampedDiff / rowStep);
-      const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
-
-      if (targetPosition !== fromPosition) {
-        const targetIndex = sameColorIndexes[targetPosition];
-        const [movedHabit] = habits.splice(originalIndex, 1);
-        habits.splice(targetIndex, 0, movedHabit);
-        changed = true;
+        if (finalPosition !== fromPosition) {
+          const targetIndex = sameColorIndexes[finalPosition];
+          const [movedHabit] = habits.splice(originalIndex, 1);
+          habits.splice(targetIndex, 0, movedHabit);
+          changed = true;
+        }
       }
+    } else {
+      const [movedHabit] = habits.splice(originalIndex, 1);
+      movedHabit.color = targetCategoryId;
+
+      let insertIndex = getGlobalInsertIndexForGoodHabit(targetCategoryId, targetPosition);
+      if (insertIndex > originalIndex) insertIndex--;
+
+      habits.splice(insertIndex, 0, movedHabit);
+      changed = true;
     }
   }
 
@@ -2531,10 +2655,11 @@ function endDrag(event) {
   dragActivated = false;
   dragPreviewTargetPosition = null;
   dragLastY = 0;
+  window.dragTargetCategoryId = null;
 
   clearGoodDragStyles();
 
-  if (changed) {
+  if (changed || wasDragged) {
     save();
     render();
   }
