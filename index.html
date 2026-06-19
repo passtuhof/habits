@@ -1097,36 +1097,6 @@ button.disabled-save {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
 
-/* Доработка drag привычки: перетаскиваемая строка уходит в отдельный верхний слой,
-   поэтому в исходной категории не остается пустой строки */
-.habit-left.dragging,
-.check-row.dragging {
-  position: fixed !important;
-  left: var(--drag-left) !important;
-  top: var(--drag-top) !important;
-  width: var(--drag-width) !important;
-  height: var(--drag-height) !important;
-  z-index: 10000 !important;
-  pointer-events: none;
-  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
-}
-
-.habit-left.dragging {
-  background: #fff !important;
-}
-
-.check-row.dragging {
-  background: #fff !important;
-}
-
-.category-left {
-  z-index: 10;
-}
-
-.category-left.dragging {
-  z-index: 9000;
-}
-
 </style>
 </head>
 <body>
@@ -2387,25 +2357,6 @@ function setGoodDragY(index, value) {
   getGoodDragRows(index).forEach(row => row.style.setProperty("--drag-y", value));
 }
 
-function setGoodDragFixedBox(index) {
-  getGoodDragRows(index).forEach(row => {
-    const rect = row.getBoundingClientRect();
-    row.style.setProperty("--drag-left", rect.left + "px");
-    row.style.setProperty("--drag-top", rect.top + "px");
-    row.style.setProperty("--drag-width", rect.width + "px");
-    row.style.setProperty("--drag-height", rect.height + "px");
-  });
-}
-
-function clearGoodDragFixedBox() {
-  document.querySelectorAll(".habit-left, .check-row").forEach(row => {
-    row.style.removeProperty("--drag-left");
-    row.style.removeProperty("--drag-top");
-    row.style.removeProperty("--drag-width");
-    row.style.removeProperty("--drag-height");
-  });
-}
-
 function clearSortPreview() {
   document.querySelectorAll(".sort-shift-up, .sort-shift-down").forEach(row => {
     row.classList.remove("sort-shift-up", "sort-shift-down");
@@ -2416,10 +2367,6 @@ function clearGoodDragStyles() {
   document.querySelectorAll(".habit-left, .check-row").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
-    row.style.removeProperty("--drag-left");
-    row.style.removeProperty("--drag-top");
-    row.style.removeProperty("--drag-width");
-    row.style.removeProperty("--drag-height");
   });
 }
 
@@ -2527,28 +2474,6 @@ function setActiveGoodDragColor(categoryId) {
   }
 }
 
-function showCategoryHeadersForHabitTransfer(sourceCategoryId, targetCategoryId) {
-  if (sourceCategoryId === targetCategoryId) return;
-
-  const categoryIds = getCategoryListForRender().map(category => category.id);
-  const sourcePosition = categoryIds.indexOf(sourceCategoryId);
-  const targetPosition = categoryIds.indexOf(targetCategoryId);
-
-  if (sourcePosition === -1 || targetPosition === -1) return;
-
-  if (targetPosition > sourcePosition) {
-    for (let position = sourcePosition + 1; position <= targetPosition; position++) {
-      const categoryId = categoryIds[position];
-      document.querySelector(`.category-left[data-category-id="${categoryId}"]`)?.classList.add("habit-sort-shift-up");
-    }
-  } else {
-    for (let position = targetPosition + 1; position <= sourcePosition; position++) {
-      const categoryId = categoryIds[position];
-      document.querySelector(`.category-left[data-category-id="${categoryId}"]`)?.classList.add("habit-sort-shift-down");
-    }
-  }
-}
-
 function showGoodSortPreview(categoryId, targetPosition) {
   clearSortPreview();
 
@@ -2575,8 +2500,6 @@ function showGoodSortPreview(categoryId, targetPosition) {
     }
     return;
   }
-
-  showCategoryHeadersForHabitTransfer(sourceCategoryId, categoryId);
 
   const targetIndexes = getGoodIndexesByCategory(categoryId, dragOriginalIndex);
   for (let position = targetPosition; position < targetIndexes.length; position++) {
@@ -2633,7 +2556,6 @@ function startDrag(event, index) {
     dragIndex = pendingDragIndex;
     dragActivated = true;
 
-    setGoodDragFixedBox(dragIndex);
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
     setGoodDragY(dragIndex, "0px");
