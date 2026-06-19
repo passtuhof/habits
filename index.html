@@ -1041,6 +1041,7 @@ button.disabled-save {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
 
+/* При сортировке категорий привычки временно скрываются — категории выглядят свернутыми */
 .app.category-sorting .habit-left,
 .app.category-sorting .check-row {
   display: none;
@@ -2002,7 +2003,7 @@ function render() {
 
     if (categoryKey !== "black") {
       leftList.innerHTML += `
-        <div class="category-left" data-category-index="${getCategorySortIndex(categoryKey)}" style="color:${color}"
+        <div class="category-left" data-category-index="${getCategorySortIndex(categoryKey)}" data-category-id="${categoryKey}" style="color:${color}"
           onclick="openCategoryModal('${categoryKey}')"
           ontouchstart="startCategoryDrag(event, getCategorySortIndex('${categoryKey}'))"
           ontouchmove="moveCategoryDrag(event)"
@@ -2079,6 +2080,12 @@ function toggleCategory(event, colorKey) {
   render();
 }
 
+function getRenderedCategoryIdsForDrag() {
+  return Array.from(document.querySelectorAll(".category-left[data-category-id]"))
+    .map(row => row.dataset.categoryId)
+    .filter(Boolean);
+}
+
 function startCategoryDrag(event, index) {
   if (index < 0) return;
 
@@ -2089,7 +2096,6 @@ function startCategoryDrag(event, index) {
   categoryDragActivated = false;
   categoryDragStartY = event.touches[0].clientY;
   categoryDragLastY = categoryDragStartY;
-  startY = categoryDragStartY;
 
   clearTimeout(categoryDragTimer);
 
@@ -2100,14 +2106,10 @@ function startCategoryDrag(event, index) {
     dragCategoryIndex = pendingCategoryIndex;
     categoryDragActivated = true;
 
-    categoryOrderBeforeDrag = [...getSortableCategoryOrder()];
+    categoryOrderBeforeDrag = getRenderedCategoryIdsForDrag();
     collapsedCategoriesBeforeDrag = { ...collapsedCategories };
-    categoryArrowTextBeforeDrag = Array.from(document.querySelectorAll(".category-arrow")).map(arrow => arrow.textContent);
 
     document.querySelector(".app")?.classList.add("category-sorting");
-    document.querySelectorAll(".category-arrow").forEach(arrow => {
-      arrow.textContent = "▲";
-    });
 
     const activeRow = document.querySelector(`[data-category-index="${dragCategoryIndex}"]`);
     if (activeRow) {
@@ -2131,11 +2133,11 @@ function clearCategoryDragStyles() {
 
   document.querySelectorAll(".category-left").forEach(row => {
     row.classList.remove(
+      "dragging",
       "category-dragging",
       "category-drag-press",
       "category-sort-shift-up",
-      "category-sort-shift-down",
-      "dragging"
+      "category-sort-shift-down"
     );
     row.style.removeProperty("--category-drag-y");
   });
@@ -2179,9 +2181,8 @@ function moveCategoryDrag(event) {
   const activeRow = document.querySelector(`[data-category-index="${dragCategoryIndex}"]`);
   if (activeRow) activeRow.style.setProperty("--category-drag-y", `${totalDiff}px`);
 
-  const sortable = categoryOrderBeforeDrag ? [...categoryOrderBeforeDrag] : getSortableCategoryOrder();
-  const rowStep = 34;
-  const moveSteps = Math.round(totalDiff / rowStep);
+  const sortable = categoryOrderBeforeDrag || getRenderedCategoryIdsForDrag();
+  const moveSteps = Math.round(totalDiff / 34);
   const targetIndex = Math.max(0, Math.min(sortable.length - 1, categoryOriginalIndex + moveSteps));
 
   if (targetIndex !== categoryPreviewTargetIndex) {
@@ -2197,24 +2198,26 @@ function endCategoryDrag(event) {
   let changed = false;
 
   if (wasDragged) {
-    suppressClickUntil = Date.now() + 350;
+    categoryClickSuppressUntil = Date.now() + 350;
   }
 
   if (wasDragged && categoryOriginalIndex !== null) {
     const finalY = event?.changedTouches?.[0]?.clientY ?? categoryDragLastY;
     const totalDiff = finalY - categoryDragStartY;
-    const sortable = categoryOrderBeforeDrag ? [...categoryOrderBeforeDrag] : getSortableCategoryOrder();
-    const rowStep = 34;
+    const visibleOrder = categoryOrderBeforeDrag ? [...categoryOrderBeforeDrag] : getRenderedCategoryIdsForDrag();
 
     const targetIndex = Math.max(
       0,
-      Math.min(sortable.length - 1, categoryOriginalIndex + Math.round(totalDiff / rowStep))
+      Math.min(visibleOrder.length - 1, categoryOriginalIndex + Math.round(totalDiff / 34))
     );
 
     if (targetIndex !== categoryOriginalIndex) {
-      const [movedCategory] = sortable.splice(categoryOriginalIndex, 1);
-      sortable.splice(targetIndex, 0, movedCategory);
-      categoryOrder = ["black", ...sortable];
+      const [movedCategory] = visibleOrder.splice(categoryOriginalIndex, 1);
+      visibleOrder.splice(targetIndex, 0, movedCategory);
+
+      const currentFullOrder = getSortableCategoryOrder();
+      const hiddenIds = currentFullOrder.filter(id => !visibleOrder.includes(id));
+      categoryOrder = ["black", ...visibleOrder, ...hiddenIds];
       changed = true;
     }
   }
@@ -2229,7 +2232,6 @@ function endCategoryDrag(event) {
   categoryPreviewTargetIndex = null;
   categoryOrderBeforeDrag = null;
   collapsedCategoriesBeforeDrag = null;
-  categoryArrowTextBeforeDrag = null;
   categoryDragActivated = false;
   categoryDragLastY = 0;
 
@@ -2647,7 +2649,7 @@ function closeModal() {
 }
 
 function openCategoryModal(colorKey) {
-  if (Date.now() < suppressClickUntil) return;
+  if (Date.now() < categoryClickSuppressUntil) return;
   if (dragCategoryIndex !== null || categoryDragActivated) return;
   if (colorKey === "black") return;
 
