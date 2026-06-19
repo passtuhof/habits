@@ -8,7 +8,7 @@
 :root {
   --left-width: 25vw;
   --day-width: 33px;
-  --row-height: 44px;
+  --row-height: 34px;
   --gap: 3px;
   --seven-days-width: calc(var(--day-width) * 7 + var(--gap) * 6);
 }
@@ -48,7 +48,7 @@ button {
 
 .empty-state {
   display: none;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   color: #777;
   padding: 20px 0;
@@ -198,8 +198,8 @@ button {
 }
 
 .cell {
-  width: 23px;
-  height: 23px;
+  width: 19px;
+  height: 19px;
   border: 1.5px solid var(--habit-color);
   border-radius: 7px;
   display: flex;
@@ -1156,6 +1156,76 @@ button.disabled-save {
 /* При сортировке самих категорий заголовок категории всё равно выше обычных строк, но ниже активной привычки */
 .category-left.dragging {
   z-index: 900 !important;
+}
+
+/* Во время перетаскивания хорошей привычки правый слой с чекбоксами поднимается выше заголовков категорий */
+body.good-habit-dragging .tracker {
+  overflow: visible;
+}
+
+body.good-habit-dragging .left-column {
+  position: relative;
+  z-index: 20000;
+}
+
+body.good-habit-dragging .right-scroll {
+  position: relative;
+  z-index: 25000;
+  isolation: isolate;
+}
+
+body.good-habit-dragging #checksList {
+  position: relative;
+  z-index: 25000;
+}
+
+body.good-habit-dragging .check-row.dragging {
+  position: relative !important;
+  z-index: 30000 !important;
+}
+
+body.good-habit-dragging .habit-left.dragging {
+  position: relative !important;
+  z-index: 30000 !important;
+}
+
+
+/* Непрозрачная карточка при переносе привычки */
+.habit-left.dragging,
+.check-row.dragging {
+  opacity: 1 !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18) !important;
+}
+
+.habit-left.dragging *,
+.check-row.dragging * {
+  opacity: 1 !important;
+}
+
+
+/* Непрозрачная карточка поверх всего при сортировке категорий и плохих привычек */
+.category-left.dragging,
+.bad-habit-row.dragging {
+  opacity: 1 !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18) !important;
+  position: relative !important;
+  z-index: 30000 !important;
+  isolation: isolate;
+}
+
+.category-left.dragging *,
+.bad-habit-row.dragging * {
+  opacity: 1 !important;
+  position: relative;
+  z-index: 30001;
+}
+
+/* Во время сортировки категорий и плохих привычек активный элемент выше всех соседних строк */
+body.category-dragging .category-left.dragging,
+body.bad-habit-dragging .bad-habit-row.dragging {
+  z-index: 30000 !important;
 }
 
 </style>
@@ -2219,6 +2289,7 @@ function clearCategorySortPreview() {
 }
 
 function clearCategoryDragStyles() {
+  document.body.classList.remove("category-dragging");
   document.querySelectorAll(".category-left").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
@@ -2311,6 +2382,7 @@ function startCategoryDrag(event, index) {
   categoryDragPressTimer = setTimeout(() => {
     dragCategoryIndex = pendingCategoryDragIndex;
     dragCategoryActivated = true;
+    document.body.classList.add("category-dragging");
 
     collapseAllVisibleCategoriesForDrag();
     render();
@@ -2425,6 +2497,7 @@ function clearSortPreview() {
 }
 
 function clearGoodDragStyles() {
+  document.body.classList.remove("good-habit-dragging");
   document.querySelectorAll(".habit-left, .check-row, .category-left, .category-spacer").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down", "habit-sort-shift-up", "habit-sort-shift-down");
     row.style.removeProperty("--drag-y");
@@ -2509,9 +2582,13 @@ function getGoodDropPositionInCategory(categoryId, clientY) {
 
   if (!rows.length) return 0;
 
+  // Более ранний и отзывчивый сдвиг хороших привычек.
+  // Было 50% высоты строки, стало около 35% — ближе к ощущению сортировки плохих привычек.
+  const shiftTrigger = 0.35;
+
   for (let i = 0; i < rows.length; i++) {
     const rect = rows[i].getBoundingClientRect();
-    if (clientY < rect.top + rect.height / 2) return i;
+    if (clientY < rect.top + rect.height * shiftTrigger) return i;
   }
 
   return rows.length;
@@ -2558,7 +2635,19 @@ function addGoodVisualShift(leftRow, className) {
   getGoodVisualPairRows(leftRow).forEach(row => row.classList.add(className));
 }
 
-function getGoodVisualDropInfoByStep(totalDiff) {
+function getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition) {
+  const targetHabitRows = leftRowsWithoutDragged.filter(row => row.classList.contains("habit-left") && row.dataset.categoryId === categoryId);
+  if (targetHabitRows.length) {
+    if (targetPosition <= 0) return leftRowsWithoutDragged.indexOf(targetHabitRows[0]);
+    if (targetPosition >= targetHabitRows.length) return leftRowsWithoutDragged.indexOf(targetHabitRows[targetHabitRows.length - 1]) + 1;
+    return leftRowsWithoutDragged.indexOf(targetHabitRows[targetPosition]);
+  }
+  const categoryHeader = leftRowsWithoutDragged.find(row => row.classList.contains("category-left") && row.dataset.categoryId === categoryId);
+  if (categoryHeader) return leftRowsWithoutDragged.indexOf(categoryHeader) + 1;
+  return categoryId === "black" ? 0 : leftRowsWithoutDragged.length;
+}
+
+function getGoodVisualDropInfo(clientY) {
   const leftRows = getGoodVisualLeftRows();
   const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
   if (!draggedRow) return null;
@@ -2568,26 +2657,25 @@ function getGoodVisualDropInfoByStep(totalDiff) {
     return { categoryId: dragColor || "black", targetPosition: 0, insertIndex: 0 };
   }
 
-  const originalVisualIndex = leftRows.indexOf(draggedRow);
-  if (originalVisualIndex === -1) return null;
-
-  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-  const moveSteps = Math.round(totalDiff / rowStep);
-  const insertIndex = Math.max(0, Math.min(rowsWithoutDragged.length, originalVisualIndex + moveSteps));
+  let insertIndex = rowsWithoutDragged.length;
+  for (let i = 0; i < rowsWithoutDragged.length; i++) {
+    const rect = rowsWithoutDragged[i].getBoundingClientRect();
+    if (clientY < rect.top + rect.height / 2) {
+      insertIndex = i;
+      break;
+    }
+  }
 
   function categoryBefore(index) {
     let categoryId = "black";
-
     for (let i = 0; i < index; i++) {
       const row = rowsWithoutDragged[i];
-
       if (row.classList.contains("category-left")) {
         categoryId = row.dataset.categoryId || categoryId;
       } else if (row.classList.contains("habit-left")) {
         categoryId = row.dataset.categoryId || categoryId;
       }
     }
-
     return categoryId;
   }
 
@@ -2610,16 +2698,35 @@ function getGoodVisualDropInfoByStep(totalDiff) {
   return { categoryId, targetPosition, insertIndex };
 }
 
-function getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition) {
-  const targetHabitRows = leftRowsWithoutDragged.filter(row => row.classList.contains("habit-left") && row.dataset.categoryId === categoryId);
-  if (targetHabitRows.length) {
-    if (targetPosition <= 0) return leftRowsWithoutDragged.indexOf(targetHabitRows[0]);
-    if (targetPosition >= targetHabitRows.length) return leftRowsWithoutDragged.indexOf(targetHabitRows[targetHabitRows.length - 1]) + 1;
-    return leftRowsWithoutDragged.indexOf(targetHabitRows[targetPosition]);
+function showGoodVisualPreviewByInsertIndex(targetInsertIndex) {
+  const leftRows = getGoodVisualLeftRows();
+  const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
+  if (!draggedRow) return false;
+
+  const originalVisualIndex = leftRows.indexOf(draggedRow);
+  if (originalVisualIndex === -1) return false;
+
+  const leftRowsWithoutDragged = leftRows.filter(row => row !== draggedRow);
+  const originalIndexByRow = new Map(leftRows.map((row, index) => [row, index]));
+  const safeTargetInsertIndex = Math.max(0, Math.min(leftRowsWithoutDragged.length, targetInsertIndex));
+
+  if (safeTargetInsertIndex > originalVisualIndex) {
+    leftRowsWithoutDragged.forEach((row, indexWithoutDragged) => {
+      const originalIndex = originalIndexByRow.get(row);
+      if (originalIndex > originalVisualIndex && indexWithoutDragged < safeTargetInsertIndex) {
+        addGoodVisualShift(row, "habit-sort-shift-up");
+      }
+    });
+  } else if (safeTargetInsertIndex < originalVisualIndex) {
+    leftRowsWithoutDragged.forEach((row, indexWithoutDragged) => {
+      const originalIndex = originalIndexByRow.get(row);
+      if (originalIndex < originalVisualIndex && indexWithoutDragged >= safeTargetInsertIndex) {
+        addGoodVisualShift(row, "habit-sort-shift-down");
+      }
+    });
   }
-  const categoryHeader = leftRowsWithoutDragged.find(row => row.classList.contains("category-left") && row.dataset.categoryId === categoryId);
-  if (categoryHeader) return leftRowsWithoutDragged.indexOf(categoryHeader) + 1;
-  return categoryId === "black" ? 0 : leftRowsWithoutDragged.length;
+
+  return true;
 }
 
 function showGoodCrossCategoryVisualPreview(categoryId, targetPosition, targetInsertIndex = null) {
@@ -2630,8 +2737,6 @@ function showGoodCrossCategoryVisualPreview(categoryId, targetPosition, targetIn
   const leftRows = getGoodVisualLeftRows();
   const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
   if (!draggedRow) return false;
-  const originalVisualIndex = leftRows.indexOf(draggedRow);
-  if (originalVisualIndex === -1) return false;
 
   const leftRowsWithoutDragged = leftRows.filter(row => row !== draggedRow);
   const targetVisualInsertIndex = getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition);
@@ -2720,6 +2825,7 @@ function startDrag(event, index) {
   dragPressTimer = setTimeout(() => {
     dragIndex = pendingDragIndex;
     dragActivated = true;
+    document.body.classList.add("good-habit-dragging");
 
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
@@ -2752,10 +2858,8 @@ function moveDrag(event) {
 
   setGoodDragY(dragIndex, `${totalDiff}px`);
 
+  let targetCategoryId = getGoodCategoryAtClientY(currentY) || dragColor || "black";
   const sourceCategoryId = dragColor || "black";
-  const visualDrop = getGoodVisualDropInfoByStep(totalDiff);
-
-  let targetCategoryId = visualDrop?.categoryId || getGoodCategoryAtClientY(currentY) || sourceCategoryId;
   let targetPosition;
   let targetInsertIndex = null;
 
@@ -2769,8 +2873,14 @@ function moveDrag(event) {
       ? getGoodDropPositionInCategory(targetCategoryId, currentY)
       : Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
   } else {
-    targetPosition = visualDrop ? visualDrop.targetPosition : getGoodDropPositionInCategory(targetCategoryId, currentY);
-    targetInsertIndex = visualDrop ? visualDrop.insertIndex : null;
+    const visualDrop = getGoodVisualDropInfo(currentY);
+    if (visualDrop) {
+      targetCategoryId = visualDrop.categoryId || targetCategoryId;
+      targetPosition = visualDrop.targetPosition;
+      targetInsertIndex = visualDrop.insertIndex;
+    } else {
+      targetPosition = getGoodDropPositionInCategory(targetCategoryId, currentY);
+    }
   }
 
   window.dragTargetCategoryId = targetCategoryId;
@@ -2801,20 +2911,16 @@ function endDrag(event) {
 
   if (wasDragged && originalIndex !== null && habits[originalIndex]) {
     const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const finalDiff = finalY - dragStartY;
+    const targetCategoryId = getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black";
     const sourceCategoryId = dragColor || "black";
-    const visualDrop = getGoodVisualDropInfoByStep(finalDiff);
-    const targetCategoryId = visualDrop?.categoryId || getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || sourceCategoryId;
-    const targetPosition = visualDrop ? visualDrop.targetPosition : getGoodDropPositionInCategory(targetCategoryId, finalY);
+    const targetPosition = getGoodDropPositionInCategory(targetCategoryId, finalY);
 
     if (targetCategoryId === sourceCategoryId) {
       const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
       const fromPosition = sameColorIndexes.indexOf(originalIndex);
 
       if (fromPosition !== -1) {
-        const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-        const moveSteps = Math.round(finalDiff / rowStep);
-        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
+        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, targetPosition));
 
         if (finalPosition !== fromPosition) {
           const targetIndex = sameColorIndexes[finalPosition];
@@ -2824,10 +2930,14 @@ function endDrag(event) {
         }
       }
     } else {
-      const [movedHabit] = habits.splice(originalIndex, 1);
-      movedHabit.color = targetCategoryId;
+      const visualDrop = getGoodVisualDropInfo(finalY);
+      const finalTargetCategoryId = visualDrop ? (visualDrop.categoryId || targetCategoryId) : targetCategoryId;
+      const finalTargetPosition = visualDrop ? visualDrop.targetPosition : targetPosition;
 
-      let insertIndex = getGlobalInsertIndexForGoodHabit(targetCategoryId, targetPosition);
+      const [movedHabit] = habits.splice(originalIndex, 1);
+      movedHabit.color = finalTargetCategoryId;
+
+      let insertIndex = getGlobalInsertIndexForGoodHabit(finalTargetCategoryId, finalTargetPosition);
       if (insertIndex > originalIndex) insertIndex--;
 
       habits.splice(insertIndex, 0, movedHabit);
@@ -2870,6 +2980,7 @@ function startBadDrag(event, badPosition) {
   dragPressTimer = setTimeout(() => {
     dragBadIndex = pendingBadDragIndex;
     dragActivated = true;
+    document.body.classList.add("bad-habit-dragging");
 
     const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
     if (activeRow) {
@@ -2890,6 +3001,7 @@ function getBadIndexesForDrag() {
 }
 
 function clearBadDragStyles() {
+  document.body.classList.remove("bad-habit-dragging");
   document.querySelectorAll(".bad-habit-row").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
