@@ -1158,6 +1158,37 @@ button.disabled-save {
   z-index: 900 !important;
 }
 
+/* Во время перетаскивания хорошей привычки правый слой с чекбоксами поднимается выше заголовков категорий */
+body.good-habit-dragging .tracker {
+  overflow: visible;
+}
+
+body.good-habit-dragging .left-column {
+  position: relative;
+  z-index: 20000;
+}
+
+body.good-habit-dragging .right-scroll {
+  position: relative;
+  z-index: 25000;
+  isolation: isolate;
+}
+
+body.good-habit-dragging #checksList {
+  position: relative;
+  z-index: 25000;
+}
+
+body.good-habit-dragging .check-row.dragging {
+  position: relative !important;
+  z-index: 30000 !important;
+}
+
+body.good-habit-dragging .habit-left.dragging {
+  position: relative !important;
+  z-index: 30000 !important;
+}
+
 </style>
 </head>
 <body>
@@ -2425,6 +2456,7 @@ function clearSortPreview() {
 }
 
 function clearGoodDragStyles() {
+  document.body.classList.remove("good-habit-dragging");
   document.querySelectorAll(".habit-left, .check-row, .category-left, .category-spacer").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down", "habit-sort-shift-up", "habit-sort-shift-down");
     row.style.removeProperty("--drag-y");
@@ -2682,6 +2714,7 @@ function startDrag(event, index) {
   dragPressTimer = setTimeout(() => {
     dragIndex = pendingDragIndex;
     dragActivated = true;
+    document.body.classList.add("good-habit-dragging");
 
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
