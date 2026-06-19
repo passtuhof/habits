@@ -1203,6 +1203,31 @@ body.good-habit-dragging .habit-left.dragging {
   opacity: 1 !important;
 }
 
+
+/* Непрозрачная карточка поверх всего при сортировке категорий и плохих привычек */
+.category-left.dragging,
+.bad-habit-row.dragging {
+  opacity: 1 !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18) !important;
+  position: relative !important;
+  z-index: 30000 !important;
+  isolation: isolate;
+}
+
+.category-left.dragging *,
+.bad-habit-row.dragging * {
+  opacity: 1 !important;
+  position: relative;
+  z-index: 30001;
+}
+
+/* Во время сортировки категорий и плохих привычек активный элемент выше всех соседних строк */
+body.category-dragging .category-left.dragging,
+body.bad-habit-dragging .bad-habit-row.dragging {
+  z-index: 30000 !important;
+}
+
 </style>
 </head>
 <body>
@@ -2264,6 +2289,7 @@ function clearCategorySortPreview() {
 }
 
 function clearCategoryDragStyles() {
+  document.body.classList.remove("category-dragging");
   document.querySelectorAll(".category-left").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
@@ -2356,6 +2382,7 @@ function startCategoryDrag(event, index) {
   categoryDragPressTimer = setTimeout(() => {
     dragCategoryIndex = pendingCategoryDragIndex;
     dragCategoryActivated = true;
+    document.body.classList.add("category-dragging");
 
     collapseAllVisibleCategoriesForDrag();
     render();
@@ -2953,6 +2980,7 @@ function startBadDrag(event, badPosition) {
   dragPressTimer = setTimeout(() => {
     dragBadIndex = pendingBadDragIndex;
     dragActivated = true;
+    document.body.classList.add("bad-habit-dragging");
 
     const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
     if (activeRow) {
@@ -2973,6 +3001,7 @@ function getBadIndexesForDrag() {
 }
 
 function clearBadDragStyles() {
+  document.body.classList.remove("bad-habit-dragging");
   document.querySelectorAll(".bad-habit-row").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
