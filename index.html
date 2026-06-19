@@ -1006,31 +1006,21 @@ button.disabled-save {
 }
 
 
-/* Mafia-style сортировка без подвисаний */
-.habit-left,
-.check-row,
-.bad-habit-row {
-  will-change: transform;
-}
-
-.habit-left.drag-press,
-.check-row.drag-press,
-.bad-habit-row.drag-press {
+/* Mafia-style сортировка категорий */
+.category-left.category-drag-press {
   transform: scale(1.018);
   background: rgba(0,0,0,0.035);
   border-radius: 10px;
 }
 
-.habit-left.dragging,
-.check-row.dragging,
-.bad-habit-row.dragging {
-  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
+.category-left.category-dragging {
+  transform: translateY(var(--category-drag-y, 0px)) scale(1.04) !important;
   background: rgba(0,0,0,0.06);
   border-radius: 10px;
   opacity: 0.96;
   box-shadow: 0 10px 24px rgba(0,0,0,0.14);
   position: relative;
-  z-index: 40;
+  z-index: 60;
   transition:
     transform 0.045s linear,
     background 0.18s ease,
@@ -1038,25 +1028,22 @@ button.disabled-save {
     box-shadow 0.18s ease;
 }
 
-.habit-left.sort-shift-up,
-.check-row.sort-shift-up,
-.bad-habit-row.sort-shift-up {
-  transform: translateY(calc(var(--row-height) * -1));
+.category-left.category-sort-shift-up {
+  transform: translateY(-34px);
 }
 
-.habit-left.sort-shift-down,
-.check-row.sort-shift-down,
-.bad-habit-row.sort-shift-down {
-  transform: translateY(var(--row-height));
+.category-left.category-sort-shift-down {
+  transform: translateY(34px);
 }
 
-.habit-left.sort-shift-up,
-.habit-left.sort-shift-down,
-.check-row.sort-shift-up,
-.check-row.sort-shift-down,
-.bad-habit-row.sort-shift-up,
-.bad-habit-row.sort-shift-down {
+.category-left.category-sort-shift-up,
+.category-left.category-sort-shift-down {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
+}
+
+.app.category-sorting .habit-left,
+.app.category-sorting .check-row {
+  display: none;
 }
 
 </style>
@@ -1293,11 +1280,7 @@ let dragPressTimer = null;
 let pendingDragIndex = null;
 let pendingBadDragIndex = null;
 let dragStartY = 0;
-let dragLastY = 0;
 let dragActivated = false;
-let dragOriginalIndex = null;
-let dragOriginalBadPosition = null;
-let dragPreviewTargetPosition = null;
 let suppressClickUntil = 0;
 
 let calendarViewDate = new Date();
@@ -2098,51 +2081,168 @@ function toggleCategory(event, colorKey) {
 
 function startCategoryDrag(event, index) {
   if (index < 0) return;
-  dragCategoryIndex = index;
-  startY = event.touches[0].clientY;
+
+  pendingCategoryIndex = index;
+  dragCategoryIndex = null;
+  categoryOriginalIndex = index;
+  categoryPreviewTargetIndex = index;
+  categoryDragActivated = false;
+  categoryDragStartY = event.touches[0].clientY;
+  categoryDragLastY = categoryDragStartY;
+  startY = categoryDragStartY;
+
+  clearTimeout(categoryDragTimer);
+
   const row = document.querySelector(`[data-category-index="${index}"]`);
-  if (row) row.classList.add("dragging");
+  if (row) row.classList.add("category-drag-press");
+
+  categoryDragTimer = setTimeout(() => {
+    dragCategoryIndex = pendingCategoryIndex;
+    categoryDragActivated = true;
+
+    categoryOrderBeforeDrag = [...getSortableCategoryOrder()];
+    collapsedCategoriesBeforeDrag = { ...collapsedCategories };
+    categoryArrowTextBeforeDrag = Array.from(document.querySelectorAll(".category-arrow")).map(arrow => arrow.textContent);
+
+    document.querySelector(".app")?.classList.add("category-sorting");
+    document.querySelectorAll(".category-arrow").forEach(arrow => {
+      arrow.textContent = "▲";
+    });
+
+    const activeRow = document.querySelector(`[data-category-index="${dragCategoryIndex}"]`);
+    if (activeRow) {
+      activeRow.classList.remove("category-drag-press");
+      activeRow.classList.add("category-dragging");
+      activeRow.style.setProperty("--category-drag-y", "0px");
+    }
+
+    if (navigator.vibrate) navigator.vibrate(12);
+  }, 180);
+}
+
+function clearCategorySortPreview() {
+  document.querySelectorAll(".category-sort-shift-up, .category-sort-shift-down").forEach(row => {
+    row.classList.remove("category-sort-shift-up", "category-sort-shift-down");
+  });
+}
+
+function clearCategoryDragStyles() {
+  document.querySelector(".app")?.classList.remove("category-sorting");
+
+  document.querySelectorAll(".category-left").forEach(row => {
+    row.classList.remove(
+      "category-dragging",
+      "category-drag-press",
+      "category-sort-shift-up",
+      "category-sort-shift-down",
+      "dragging"
+    );
+    row.style.removeProperty("--category-drag-y");
+  });
+}
+
+function showCategorySortPreview(targetIndex) {
+  clearCategorySortPreview();
+
+  if (categoryOriginalIndex === null || targetIndex === categoryOriginalIndex) return;
+
+  if (targetIndex > categoryOriginalIndex) {
+    for (let i = categoryOriginalIndex + 1; i <= targetIndex; i++) {
+      document.querySelector(`[data-category-index="${i}"]`)?.classList.add("category-sort-shift-up");
+    }
+  } else {
+    for (let i = targetIndex; i < categoryOriginalIndex; i++) {
+      document.querySelector(`[data-category-index="${i}"]`)?.classList.add("category-sort-shift-down");
+    }
+  }
 }
 
 function moveCategoryDrag(event) {
-  event.preventDefault();
-  if (dragCategoryIndex === null) return;
-
   const currentY = event.touches[0].clientY;
-  const diff = currentY - startY;
-  const sortable = getSortableCategoryOrder();
+  categoryDragLastY = currentY;
+  const totalDiff = currentY - categoryDragStartY;
 
-  if (diff > 34 && dragCategoryIndex < sortable.length - 1) {
-    const temp = sortable[dragCategoryIndex];
-    sortable[dragCategoryIndex] = sortable[dragCategoryIndex + 1];
-    sortable[dragCategoryIndex + 1] = temp;
-
-    categoryOrder = ["black", ...sortable];
-    dragCategoryIndex++;
-    startY = currentY;
-    save();
-    render();
+  if (!categoryDragActivated) {
+    if (Math.abs(totalDiff) > 10) {
+      clearTimeout(categoryDragTimer);
+      pendingCategoryIndex = null;
+      categoryOriginalIndex = null;
+      clearCategoryDragStyles();
+    }
+    return;
   }
 
-  if (diff < -34 && dragCategoryIndex > 0) {
-    const temp = sortable[dragCategoryIndex];
-    sortable[dragCategoryIndex] = sortable[dragCategoryIndex - 1];
-    sortable[dragCategoryIndex - 1] = temp;
+  event.preventDefault();
 
-    categoryOrder = ["black", ...sortable];
-    dragCategoryIndex--;
-    startY = currentY;
-    save();
-    render();
+  if (dragCategoryIndex === null || categoryOriginalIndex === null) return;
+
+  const activeRow = document.querySelector(`[data-category-index="${dragCategoryIndex}"]`);
+  if (activeRow) activeRow.style.setProperty("--category-drag-y", `${totalDiff}px`);
+
+  const sortable = categoryOrderBeforeDrag ? [...categoryOrderBeforeDrag] : getSortableCategoryOrder();
+  const rowStep = 34;
+  const moveSteps = Math.round(totalDiff / rowStep);
+  const targetIndex = Math.max(0, Math.min(sortable.length - 1, categoryOriginalIndex + moveSteps));
+
+  if (targetIndex !== categoryPreviewTargetIndex) {
+    categoryPreviewTargetIndex = targetIndex;
+    showCategorySortPreview(targetIndex);
   }
 }
 
-function endCategoryDrag() {
+function endCategoryDrag(event) {
+  clearTimeout(categoryDragTimer);
+
+  const wasDragged = categoryDragActivated;
+  let changed = false;
+
+  if (wasDragged) {
+    suppressClickUntil = Date.now() + 350;
+  }
+
+  if (wasDragged && categoryOriginalIndex !== null) {
+    const finalY = event?.changedTouches?.[0]?.clientY ?? categoryDragLastY;
+    const totalDiff = finalY - categoryDragStartY;
+    const sortable = categoryOrderBeforeDrag ? [...categoryOrderBeforeDrag] : getSortableCategoryOrder();
+    const rowStep = 34;
+
+    const targetIndex = Math.max(
+      0,
+      Math.min(sortable.length - 1, categoryOriginalIndex + Math.round(totalDiff / rowStep))
+    );
+
+    if (targetIndex !== categoryOriginalIndex) {
+      const [movedCategory] = sortable.splice(categoryOriginalIndex, 1);
+      sortable.splice(targetIndex, 0, movedCategory);
+      categoryOrder = ["black", ...sortable];
+      changed = true;
+    }
+  }
+
+  if (collapsedCategoriesBeforeDrag) {
+    collapsedCategories = { ...collapsedCategoriesBeforeDrag };
+  }
+
   dragCategoryIndex = null;
-  document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
+  pendingCategoryIndex = null;
+  categoryOriginalIndex = null;
+  categoryPreviewTargetIndex = null;
+  categoryOrderBeforeDrag = null;
+  collapsedCategoriesBeforeDrag = null;
+  categoryArrowTextBeforeDrag = null;
+  categoryDragActivated = false;
+  categoryDragLastY = 0;
+
+  clearCategoryDragStyles();
+
+  if (changed) {
+    save();
+  }
+
+  if (wasDragged || changed) {
+    render();
+  }
 }
-
-
 
 function getGoodDragRows(index) {
   return [
@@ -2163,63 +2263,25 @@ function setGoodDragY(index, value) {
   getGoodDragRows(index).forEach(row => row.style.setProperty("--drag-y", value));
 }
 
-function clearSortPreview() {
-  document.querySelectorAll(".sort-shift-up, .sort-shift-down").forEach(row => {
-    row.classList.remove("sort-shift-up", "sort-shift-down");
-  });
-}
-
 function clearGoodDragStyles() {
   document.querySelectorAll(".habit-left, .check-row").forEach(row => {
-    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
+    row.classList.remove("dragging", "drag-press");
     row.style.removeProperty("--drag-y");
   });
-}
-
-function getSameColorIndexesForDrag() {
-  return habits
-    .map((habit, index) => ({ habit, index }))
-    .filter(item => isGoodHabit(item.habit) && item.habit.color === dragColor)
-    .map(item => item.index);
-}
-
-function showGoodSortPreview(targetPosition) {
-  clearSortPreview();
-
-  if (dragOriginalIndex === null) return;
-
-  const sameColorIndexes = getSameColorIndexesForDrag();
-  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
-
-  if (fromPosition === -1 || targetPosition === fromPosition) return;
-
-  if (targetPosition > fromPosition) {
-    for (let position = fromPosition + 1; position <= targetPosition; position++) {
-      const index = sameColorIndexes[position];
-      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-up"));
-    }
-  } else {
-    for (let position = targetPosition; position < fromPosition; position++) {
-      const index = sameColorIndexes[position];
-      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-down"));
-    }
-  }
 }
 
 function startDrag(event, index) {
   if (!isGoodHabit(habits[index])) return;
 
   pendingDragIndex = index;
-  dragOriginalIndex = index;
   dragIndex = null;
   dragColor = habits[index].color;
   dragActivated = false;
   dragStartY = event.touches[0].clientY;
-  dragLastY = dragStartY;
   startY = dragStartY;
-  dragPreviewTargetPosition = null;
 
   clearTimeout(dragPressTimer);
+
   addGoodDragClass(index, "drag-press");
 
   dragPressTimer = setTimeout(() => {
@@ -2236,7 +2298,6 @@ function startDrag(event, index) {
 
 function moveDrag(event) {
   const currentY = event.touches[0].clientY;
-  dragLastY = currentY;
   const totalDiff = currentY - dragStartY;
 
   if (!dragActivated) {
@@ -2244,98 +2305,73 @@ function moveDrag(event) {
       clearTimeout(dragPressTimer);
       clearGoodDragStyles();
       pendingDragIndex = null;
-      dragOriginalIndex = null;
       dragColor = null;
     }
     return;
   }
 
   event.preventDefault();
-  if (dragIndex === null || dragOriginalIndex === null) return;
+  if (dragIndex === null) return;
 
-  setGoodDragY(dragIndex, `${totalDiff}px`);
+  setGoodDragY(dragIndex, `${currentY - startY}px`);
 
-  const sameColorIndexes = getSameColorIndexesForDrag();
-  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
-  if (fromPosition === -1) return;
+  const diff = currentY - startY;
 
-  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-  const moveSteps = Math.round(totalDiff / rowStep);
-  const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
+  if (diff > 44) {
+    moveWithinCategory(1);
+    startY = currentY;
+  }
 
-  if (targetPosition !== dragPreviewTargetPosition) {
-    dragPreviewTargetPosition = targetPosition;
-    showGoodSortPreview(targetPosition);
+  if (diff < -44) {
+    moveWithinCategory(-1);
+    startY = currentY;
   }
 }
 
 function moveWithinCategory(direction) {
-  // Render больше не вызывается во время движения.
-  // Соседние строки раздвигаются визуально в moveDrag().
+  const sameColorIndexes = habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => isGoodHabit(item.habit) && item.habit.color === dragColor)
+    .map(item => item.index);
+
+  const currentPosition = sameColorIndexes.indexOf(dragIndex);
+  const targetPosition = currentPosition + direction;
+  if (targetPosition < 0 || targetPosition >= sameColorIndexes.length) return;
+
+  const targetIndex = sameColorIndexes[targetPosition];
+  const temp = habits[dragIndex];
+  habits[dragIndex] = habits[targetIndex];
+  habits[targetIndex] = temp;
+  dragIndex = targetIndex;
+
+  save();
+  render();
+
+  addGoodDragClass(dragIndex, "dragging");
+  setGoodDragY(dragIndex, "0px");
 }
 
-function endDrag(event) {
+function endDrag() {
   clearTimeout(dragPressTimer);
 
-  const wasDragged = dragActivated;
-  const originalIndex = dragOriginalIndex;
-  const color = dragColor;
-  let changed = false;
-
-  if (wasDragged) {
+  if (dragActivated) {
     suppressClickUntil = Date.now() + 350;
-  }
-
-  if (wasDragged && originalIndex !== null && habits[originalIndex]) {
-    const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const totalDiff = finalY - dragStartY;
-    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-
-    const sameColorIndexes = habits
-      .map((habit, index) => ({ habit, index }))
-      .filter(item => isGoodHabit(item.habit) && item.habit.color === color)
-      .map(item => item.index);
-
-    const fromPosition = sameColorIndexes.indexOf(originalIndex);
-
-    if (fromPosition !== -1) {
-      const moveSteps = Math.round(totalDiff / rowStep);
-      const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
-
-      if (targetPosition !== fromPosition) {
-        const targetIndex = sameColorIndexes[targetPosition];
-        const [movedHabit] = habits.splice(originalIndex, 1);
-        habits.splice(targetIndex, 0, movedHabit);
-        changed = true;
-      }
-    }
   }
 
   dragIndex = null;
   pendingDragIndex = null;
-  dragOriginalIndex = null;
   dragColor = null;
   dragActivated = false;
-  dragPreviewTargetPosition = null;
-  dragLastY = 0;
 
   clearGoodDragStyles();
-
-  if (changed) {
-    save();
-    render();
-  }
 }
 
 function startBadDrag(event, badPosition) {
   pendingBadDragIndex = badPosition;
-  dragOriginalBadPosition = badPosition;
   dragBadIndex = null;
   dragActivated = false;
   dragStartY = event.touches[0].clientY;
-  dragLastY = dragStartY;
   startY = dragStartY;
-  dragPreviewTargetPosition = null;
 
   clearTimeout(dragPressTimer);
 
@@ -2357,119 +2393,79 @@ function startBadDrag(event, badPosition) {
   }, 180);
 }
 
-function getBadIndexesForDrag() {
-  return habits
-    .map((habit, index) => ({ habit, index }))
-    .filter(item => item.habit.type === "bad")
-    .map(item => item.index);
-}
-
-function clearBadDragStyles() {
-  document.querySelectorAll(".bad-habit-row").forEach(row => {
-    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
-    row.style.removeProperty("--drag-y");
-  });
-}
-
-function showBadSortPreview(targetPosition) {
-  clearSortPreview();
-
-  const fromPosition = dragOriginalBadPosition;
-  if (fromPosition === null || targetPosition === fromPosition) return;
-
-  if (targetPosition > fromPosition) {
-    for (let position = fromPosition + 1; position <= targetPosition; position++) {
-      document.querySelector(`[data-bad-index="${position}"]`)?.classList.add("sort-shift-up");
-    }
-  } else {
-    for (let position = targetPosition; position < fromPosition; position++) {
-      document.querySelector(`[data-bad-index="${position}"]`)?.classList.add("sort-shift-down");
-    }
-  }
-}
-
 function moveBadDrag(event) {
   const currentY = event.touches[0].clientY;
-  dragLastY = currentY;
   const totalDiff = currentY - dragStartY;
 
   if (!dragActivated) {
     if (Math.abs(totalDiff) > 10) {
       clearTimeout(dragPressTimer);
-      clearBadDragStyles();
+      document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("drag-press"));
       pendingBadDragIndex = null;
-      dragOriginalBadPosition = null;
     }
     return;
   }
 
   event.preventDefault();
-  if (dragBadIndex === null || dragOriginalBadPosition === null) return;
+  if (dragBadIndex === null) return;
 
   const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-  if (activeRow) activeRow.style.setProperty("--drag-y", `${totalDiff}px`);
+  if (activeRow) activeRow.style.setProperty("--drag-y", `${currentY - startY}px`);
 
-  const badIndexes = getBadIndexesForDrag();
-  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-  const moveSteps = Math.round(totalDiff / rowStep);
-  const targetPosition = Math.max(0, Math.min(badIndexes.length - 1, dragOriginalBadPosition + moveSteps));
+  const diff = currentY - startY;
 
-  if (targetPosition !== dragPreviewTargetPosition) {
-    dragPreviewTargetPosition = targetPosition;
-    showBadSortPreview(targetPosition);
+  if (diff > 44) {
+    moveBadHabit(1);
+    startY = currentY;
+  }
+
+  if (diff < -44) {
+    moveBadHabit(-1);
+    startY = currentY;
   }
 }
 
 function moveBadHabit(direction) {
-  // Render больше не вызывается во время движения.
-  // Соседние строки раздвигаются визуально в moveBadDrag().
+  const badIndexes = habits
+    .map((habit, index) => ({ habit, index }))
+    .filter(item => item.habit.type === "bad")
+    .map(item => item.index);
+
+  const currentHabitIndex = badIndexes[dragBadIndex];
+  const targetBadPosition = dragBadIndex + direction;
+  if (targetBadPosition < 0 || targetBadPosition >= badIndexes.length) return;
+
+  const targetHabitIndex = badIndexes[targetBadPosition];
+  const temp = habits[currentHabitIndex];
+  habits[currentHabitIndex] = habits[targetHabitIndex];
+  habits[targetHabitIndex] = temp;
+  dragBadIndex = targetBadPosition;
+
+  save();
+  render();
+
+  const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+  if (row) {
+    row.classList.add("dragging");
+    row.style.setProperty("--drag-y", "0px");
+  }
 }
 
-function endBadDrag(event) {
+function endBadDrag() {
   clearTimeout(dragPressTimer);
 
-  const wasDragged = dragActivated;
-  const originalBadPosition = dragOriginalBadPosition;
-  let changed = false;
-
-  if (wasDragged) {
+  if (dragActivated) {
     suppressClickUntil = Date.now() + 350;
-  }
-
-  if (wasDragged && originalBadPosition !== null) {
-    const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const totalDiff = finalY - dragStartY;
-    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-
-    const badIndexes = getBadIndexesForDrag();
-    const targetBadPosition = Math.max(
-      0,
-      Math.min(badIndexes.length - 1, originalBadPosition + Math.round(totalDiff / rowStep))
-    );
-
-    if (targetBadPosition !== originalBadPosition) {
-      const currentHabitIndex = badIndexes[originalBadPosition];
-      const targetHabitIndex = badIndexes[targetBadPosition];
-
-      const [movedHabit] = habits.splice(currentHabitIndex, 1);
-      habits.splice(targetHabitIndex, 0, movedHabit);
-      changed = true;
-    }
   }
 
   dragBadIndex = null;
   pendingBadDragIndex = null;
-  dragOriginalBadPosition = null;
   dragActivated = false;
-  dragPreviewTargetPosition = null;
-  dragLastY = 0;
 
-  clearBadDragStyles();
-
-  if (changed) {
-    save();
-    render();
-  }
+  document.querySelectorAll(".bad-habit-row").forEach(row => {
+    row.classList.remove("dragging", "drag-press");
+    row.style.removeProperty("--drag-y");
+  });
 }
 
 function toggleHabit(habitIndex, dateKey) {
@@ -2651,7 +2647,8 @@ function closeModal() {
 }
 
 function openCategoryModal(colorKey) {
-  if (dragCategoryIndex !== null) return;
+  if (Date.now() < suppressClickUntil) return;
+  if (dragCategoryIndex !== null || categoryDragActivated) return;
   if (colorKey === "black") return;
 
   editingCategory = colorKey;
