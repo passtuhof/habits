@@ -85,14 +85,18 @@ button {
 
 .category-left {
   height: 34px;
+  width: calc(var(--left-width) + 8px + var(--seven-days-width));
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
+  justify-content: center;
+  position: relative;
   border-bottom: 1px solid #eee;
+  background: #fff;
   font-size: 15px;
   font-weight: 400;
   touch-action: none;
+  text-align: center;
+  z-index: 2;
 }
 
 .category-left.dragging,
@@ -105,14 +109,24 @@ button {
 }
 
 .category-title {
+  width: 100%;
+  padding: 0 34px;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .category-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 12px;
+  line-height: 1;
   flex-shrink: 0;
+  padding: 8px;
+  z-index: 3;
 }
 
 .category-spacer {
@@ -552,6 +566,7 @@ border-radius:50%;
   align-items:center;
   justify-content:center;
   font-size:20px;
+  line-height:1;
 }
 
 .settings-block-title {
@@ -603,7 +618,7 @@ border-radius:50%;
   width:100%;
   background:#f3f3f3;
   color:#111;
-  text-align:left;
+  text-align:center;
   padding:12px;
   border-radius:12px;
   font-size:16px;
@@ -685,7 +700,313 @@ textarea,
 }
 
 
-/* Плавная сортировка без render() во время движения */
+@media (orientation: landscape) {
+  .app{
+    max-width:none;
+    width:100%;
+  }
+
+  .tracker{
+    grid-template-columns: minmax(220px, 30%) 1fr;
+    width:100%;
+  }
+
+  .right-scroll{
+    width:100%;
+  }
+
+  .right-inner{
+    min-width:max-content;
+  }
+}
+
+
+/* Плавный тумблер настроек */
+.toggle-two {
+  position: relative;
+  overflow: hidden;
+  transition: background 0.24s ease;
+}
+
+.toggle-two::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  background: #111;
+  border-radius: 9px;
+  transform: translateX(0);
+  transition: transform 0.24s ease;
+  z-index: 0;
+}
+
+.toggle-two.yes::before {
+  transform: translateX(100%);
+}
+
+.toggle-two button {
+  position: relative;
+  z-index: 1;
+  transition: color 0.24s ease, background 0.24s ease;
+}
+
+.toggle-two button.active {
+  background: transparent;
+  color: #fff;
+}
+
+button:disabled,
+button.disabled-save {
+  background: #ddd !important;
+  color: #999 !important;
+  pointer-events: none;
+}
+
+.category-left {
+  transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+}
+
+
+/* Перетаскивание тумблера настроек */
+.toggle-two {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.toggle-two::before {
+  transform: translateX(var(--toggle-shift, 0%)) !important;
+}
+
+.toggle-two.yes::before {
+  transform: translateX(var(--toggle-shift, 100%)) !important;
+}
+
+.toggle-two.dragging::before {
+  transition: none;
+}
+
+
+/* Интерактивная подсветка текста при перетаскивании тумблера */
+.toggle-two.drag-preview-no #violationsNoBtn {
+  color: #fff;
+}
+
+.toggle-two.drag-preview-no #violationsYesBtn {
+  color: #111;
+}
+
+.toggle-two.drag-preview-yes #violationsNoBtn {
+  color: #111;
+}
+
+.toggle-two.drag-preview-yes #violationsYesBtn {
+  color: #fff;
+}
+
+
+/* Красивый переключатель Хорошая / Плохая */
+.type-switch {
+  position: relative;
+  background: #eee;
+  border-radius: 12px;
+  padding: 3px;
+  gap: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.type-switch::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  background: #111;
+  border-radius: 9px;
+  transform: translateX(var(--habit-type-shift, 0%));
+  transition: transform 0.24s ease;
+  z-index: 0;
+}
+
+.type-switch.bad::before {
+  transform: translateX(var(--habit-type-shift, 100%));
+}
+
+.type-switch.dragging::before {
+  transition: none;
+}
+
+.type-switch .type-btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  color: #111;
+  border-radius: 9px;
+  transition: color 0.24s ease, background 0.24s ease;
+}
+
+.type-switch .type-btn.active {
+  background: transparent;
+  color: #fff;
+}
+
+.type-switch.drag-preview-good #goodTypeBtn {
+  color: #fff;
+}
+
+.type-switch.drag-preview-good #badTypeBtn {
+  color: #111;
+}
+
+.type-switch.drag-preview-bad #goodTypeBtn {
+  color: #111;
+}
+
+.type-switch.drag-preview-bad #badTypeBtn {
+  color: #fff;
+}
+
+.type-switch.disabled {
+  opacity: 0.55;
+  touch-action: auto;
+}
+
+
+.field-wrap {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.field-wrap input {
+  margin-bottom: 0;
+  padding-right: 58px;
+}
+
+.add-habit-btn svg,
+.top-actions button svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+
+@media (orientation: landscape) {
+  .category-left {
+    width: calc(100vw - 28px);
+    max-width: calc(100vw - 28px);
+  }
+}
+
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reset-dot-btn {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  padding: 0;
+  border-radius: 50%;
+  background: #111;
+  display: inline-block;
+}
+
+
+/* Плавная сортировка привычек строками */
+.habit-left,
+.bad-habit-row {
+  will-change: transform;
+  transition:
+    transform 0.22s cubic-bezier(.2,.8,.2,1),
+    background 0.22s ease,
+    opacity 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.habit-left.drag-press,
+.bad-habit-row.drag-press {
+  transform: scale(1.018);
+  background: rgba(0,0,0,0.035);
+  border-radius: 10px;
+}
+
+.habit-left.dragging,
+.bad-habit-row.dragging {
+  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
+  background: rgba(0,0,0,0.06);
+  border-radius: 10px;
+  opacity: 0.95;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.14);
+  position: relative;
+  z-index: 30;
+  transition:
+    transform 0.06s linear,
+    background 0.18s ease,
+    opacity 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+
+/* Перетаскивание всей строки привычки вместе с чекбоксами */
+.check-row {
+  will-change: transform;
+  transition:
+    transform 0.22s cubic-bezier(.2,.8,.2,1),
+    background 0.22s ease,
+    opacity 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.check-row.drag-press {
+  transform: scale(1.018);
+  background: rgba(0,0,0,0.025);
+  border-radius: 10px;
+}
+
+.check-row.dragging {
+  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
+  background: rgba(0,0,0,0.04);
+  border-radius: 10px;
+  opacity: 0.95;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+  position: relative;
+  z-index: 30;
+  transition:
+    transform 0.06s linear,
+    background 0.18s ease,
+    opacity 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+
+/* Запрет выделения и копирования всего интерфейса */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Разрешаем выделение только в нужных полях */
+#habitTitle,
+#habitDescription,
+#newCategoryName,
+#categoryTitleInput {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+
+/* Mafia-style сортировка без подвисаний */
 .habit-left,
 .check-row,
 .bad-habit-row {
@@ -706,12 +1027,12 @@ textarea,
   transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
   background: rgba(0,0,0,0.06);
   border-radius: 10px;
-  opacity: 0.95;
+  opacity: 0.96;
   box-shadow: 0 10px 24px rgba(0,0,0,0.14);
   position: relative;
-  z-index: 30;
+  z-index: 40;
   transition:
-    transform 0.06s linear,
+    transform 0.045s linear,
     background 0.18s ease,
     opacity 0.18s ease,
     box-shadow 0.18s ease;
@@ -744,10 +1065,21 @@ textarea,
 
 <div class="app">
   <div class="top">
-    <h1>Привычки</h1>
+    <div class="title-row">
+      <h1>Привычки</h1>
+      <button class="reset-dot-btn" onclick="resetAllData()" title="Очистить Local Storage"></button>
+    </div>
     <div class="top-actions">
-      <button onclick="openSettingsModal()" title="Настройки">⚙️</button>
-      <button onclick="openModal()">+</button>
+      <button class="add-habit-btn" onclick="openModal()" title="Добавить привычку">
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button onclick="openSettingsModal()" title="Настройки" style="display:flex;align-items:center;justify-content:center;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.1 7.1 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.12-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z" fill="white"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -831,10 +1163,13 @@ textarea,
       <button id="badTypeBtn" class="type-btn" onclick="setHabitType('bad')">Плохая</button>
     </div>
 
-    <input id="habitTitle" placeholder="Название привычки">
+    <div class="field-wrap">
+      <input id="habitTitle" maxlength="50" placeholder="Название привычки" oninput="updateHabitTitleCounter(); updateHabitSaveButton()">
+      <div id="habitTitleCounter" class="char-counter">0/50</div>
+    </div>
 
     <div class="description-wrap">
-      <textarea id="habitDescription" maxlength="1000" placeholder="Описание привычки" oninput="updateDescriptionCounter()"></textarea>
+      <textarea id="habitDescription" maxlength="1000" placeholder="Описание привычки" oninput="updateDescriptionCounter(); updateHabitSaveButton();"></textarea>
       <div id="descriptionCounter" class="char-counter">0/1000</div>
     </div>
 
@@ -860,7 +1195,7 @@ textarea,
     </div>
 
     <div class="buttons">
-      <button onclick="saveHabit()">Сохранить</button>
+      <button id="saveHabitButton" onclick="saveHabit()">Сохранить</button>
       <button id="deleteButton" class="delete-in-modal" onclick="deleteCurrentHabit()">Удалить</button>
     </div>
   </div>
@@ -879,12 +1214,15 @@ textarea,
     <button type="button" class="modal-close-btn" onclick="closeNewCategoryModal()">×</button>
     <h2>Новая категория</h2>
     <div class="label">Название</div>
-    <input id="newCategoryName" placeholder="Название категории">
+    <div class="field-wrap">
+      <input id="newCategoryName" maxlength="50" placeholder="Название категории" oninput="updateNewCategoryCounter(); updateNewCategorySaveButton()">
+      <div id="newCategoryCounter" class="char-counter">0/50</div>
+    </div>
     <div class="label">Цвет</div>
     <input id="newCategoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('newCategoryColor')" value="Чёрный">
     <input id="newCategoryColor" type="hidden" value="black">
     <div class="buttons">
-      <button onclick="saveNewCategory()">Сохранить</button>
+      <button id="saveNewCategoryButton" onclick="saveNewCategory()">Сохранить</button>
     </div>
   </div>
 </div>
@@ -895,14 +1233,17 @@ textarea,
     <h2 style='font-size:22px;white-space:nowrap;text-align:left;'>Редактировать категорию</h2>
 
     <div class="label">Название</div>
-    <input id="categoryTitleInput" placeholder="Название">
+    <div class="field-wrap">
+      <input id="categoryTitleInput" maxlength="50" placeholder="Название" oninput="updateCategoryTitleCounter(); updateCategorySaveButton()">
+      <div id="categoryTitleCounter" class="char-counter">0/50</div>
+    </div>
 
     <div class="label">Цвет</div>
     <input id="categoryColorDisplay" class="picker-field" readonly onclick="openColorPicker('categoryColor')" value="Чёрный">
     <input id="categoryColor" type="hidden" value="black">
 
     <div class="buttons">
-      <button onclick="saveCategoryName()">Сохранить</button>
+      <button id="saveCategoryButton" onclick="saveCategoryName()">Сохранить</button>
       <button class="delete-in-modal" onclick="openCategoryDeleteChoice()">Удалить</button>
     </div>
   </div>
@@ -929,7 +1270,7 @@ let categoryNames = JSON.parse(localStorage.getItem("categoryNames")) || {
   blue: "Категория"
 };
 
-let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black", "red", "green", "blue"];
+let categoryOrder = JSON.parse(localStorage.getItem("categoryOrder")) || ["black"];
 let collapsedCategories = JSON.parse(localStorage.getItem("collapsedCategories")) || {};
 
 let editingIndex = null;
@@ -938,6 +1279,9 @@ let currentHabitType = "good";
 let appSettings = JSON.parse(localStorage.getItem("appSettings")) || {
   showViolations: false
 };
+
+let originalHabitSnapshot = "";
+let originalCategorySnapshot = "";
 
 let dragIndex = null;
 let dragColor = null;
@@ -967,6 +1311,13 @@ const colorMap = {
   yellow: "#ffcc00"
 };
 
+
+
+function resetAllData() {
+  if (!confirm("Очистить все данные и вернуть сервис к первому запуску?")) return;
+  localStorage.clear();
+  location.reload();
+}
 
 function showModal(id) {
   const modal = document.getElementById(id);
@@ -1008,6 +1359,7 @@ function setCategoryValue(value) {
   if (value === "black") {
     display.value = "Нет";
     display.style.color = "#111111";
+    updateHabitSaveButton();
     return;
   }
 
@@ -1019,6 +1371,8 @@ function setCategoryValue(value) {
     display.value = categoryNames[value] || "Категория";
     display.style.color = getColorValue(value);
   }
+
+  updateHabitSaveButton();
 }
 
 function openCategoryPicker() {
@@ -1053,7 +1407,7 @@ function openCategoryPicker() {
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "picker-item add";
-  addBtn.textContent = "➕ Добавить";
+  addBtn.textContent = "Добавить";
   addBtn.onclick = () => {
     closeCategoryPicker();
     openNewCategoryModal();
@@ -1075,6 +1429,9 @@ function setColorValue(targetId, colorKey) {
   hidden.value = colorKey;
   display.value = getColorName(colorKey);
   display.style.color = getColorValue(colorKey);
+
+  if (targetId === "newCategoryColor") updateNewCategorySaveButton();
+  if (targetId === "categoryColor") updateCategorySaveButton();
 }
 
 function openColorPicker(targetId) {
@@ -1126,8 +1483,111 @@ function confirmDeleteCurrentHabit() {
   render();
 }
 
+
+
+
+function setViolationsDragPreview(isYesPreview) {
+  if (appSettings.showViolations !== isYesPreview) {
+    appSettings.showViolations = isYesPreview;
+    updateViolationsVisibility();
+    render();
+  }
+}
+
+function updateViolationsTogglePreview(isYesPreview) {
+  const toggle = document.querySelector("#settingsModal .toggle-two");
+  const noBtn = document.getElementById("violationsNoBtn");
+  const yesBtn = document.getElementById("violationsYesBtn");
+
+  if (!toggle || !noBtn || !yesBtn) return;
+
+  toggle.classList.toggle("drag-preview-no", !isYesPreview);
+  toggle.classList.toggle("drag-preview-yes", isYesPreview);
+
+  noBtn.classList.toggle("active", !isYesPreview);
+  yesBtn.classList.toggle("active", isYesPreview);
+}
+
+function clearViolationsTogglePreview() {
+  const toggle = document.querySelector("#settingsModal .toggle-two");
+  if (!toggle) return;
+
+  toggle.classList.remove("drag-preview-no", "drag-preview-yes");
+}
+
+let violationsToggleDrag = {
+  active: false,
+  moved: false,
+  rect: null
+};
+
+function initViolationsToggleDrag() {
+  const toggle = document.querySelector("#settingsModal .toggle-two");
+  if (!toggle || toggle.dataset.dragReady === "true") return;
+
+  toggle.dataset.dragReady = "true";
+
+  toggle.addEventListener("pointerdown", function(event) {
+    violationsToggleDrag.active = true;
+    violationsToggleDrag.moved = false;
+    violationsToggleDrag.rect = toggle.getBoundingClientRect();
+
+    toggle.classList.add("dragging");
+    toggle.setPointerCapture(event.pointerId);
+    toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
+    updateViolationsTogglePreview(appSettings.showViolations);
+  });
+
+  toggle.addEventListener("pointermove", function(event) {
+    if (!violationsToggleDrag.active || !violationsToggleDrag.rect) return;
+
+    event.preventDefault();
+    violationsToggleDrag.moved = true;
+
+    const rect = violationsToggleDrag.rect;
+    const position = (event.clientX - rect.left) / rect.width;
+    const shift = Math.max(0, Math.min(100, position * 200 - 50));
+    const isYesPreview = event.clientX >= rect.left + rect.width / 2;
+
+    toggle.style.setProperty("--toggle-shift", shift + "%");
+    updateViolationsTogglePreview(isYesPreview);
+    setViolationsDragPreview(isYesPreview);
+  }, { passive: false });
+
+  function finishDrag(event) {
+    if (!violationsToggleDrag.active || !violationsToggleDrag.rect) return;
+
+    const rect = violationsToggleDrag.rect;
+    const shouldBeYes = event.clientX >= rect.left + rect.width / 2;
+
+    violationsToggleDrag.active = false;
+    violationsToggleDrag.rect = null;
+
+    toggle.classList.remove("dragging");
+    clearViolationsTogglePreview();
+
+    if (event.pointerId !== undefined) {
+      try { toggle.releasePointerCapture(event.pointerId); } catch (e) {}
+    }
+
+    if (violationsToggleDrag.moved) {
+      setViolationsSetting(shouldBeYes);
+    } else {
+      updateSettingsUI();
+      updateViolationsVisibility();
+      render();
+    }
+
+    violationsToggleDrag.moved = false;
+  }
+
+  toggle.addEventListener("pointerup", finishDrag);
+  toggle.addEventListener("pointercancel", finishDrag);
+}
+
 function openSettingsModal() {
   updateSettingsUI();
+  initViolationsToggleDrag();
   showModal("settingsModal");
 }
 
@@ -1151,6 +1611,12 @@ function updateSettingsUI() {
 
   noBtn.classList.toggle("active", !appSettings.showViolations);
   yesBtn.classList.toggle("active", appSettings.showViolations);
+
+  const toggle = noBtn.closest(".toggle-two");
+  if (toggle) {
+    toggle.classList.toggle("yes", appSettings.showViolations);
+    toggle.style.setProperty("--toggle-shift", appSettings.showViolations ? "100%" : "0%");
+  }
 }
 
 function updateViolationsVisibility() {
@@ -1158,6 +1624,220 @@ function updateViolationsVisibility() {
   if (!row) return;
 
   row.style.display = (appSettings.showViolations && currentHabitType === "bad" && editingIndex !== null) ? "flex" : "none";
+}
+
+
+
+let habitTypeToggleDrag = {
+  active: false,
+  moved: false,
+  rect: null
+};
+
+function updateHabitTypeToggleUI(typePreview = currentHabitType) {
+  const switcher = document.querySelector("#modal .type-switch");
+  const goodBtn = document.getElementById("goodTypeBtn");
+  const badBtn = document.getElementById("badTypeBtn");
+
+  if (!switcher || !goodBtn || !badBtn) return;
+
+  const isBad = typePreview === "bad";
+
+  switcher.classList.toggle("bad", isBad);
+  switcher.style.setProperty("--habit-type-shift", isBad ? "100%" : "0%");
+
+  goodBtn.classList.toggle("active", !isBad);
+  badBtn.classList.toggle("active", isBad);
+}
+
+
+function updateHabitTypeFieldsOnly() {
+  const goodFields = document.getElementById("goodFields");
+  const badFields = document.getElementById("badFields");
+
+  if (!goodFields || !badFields) return;
+
+  goodFields.style.display = currentHabitType === "good" ? "block" : "none";
+  badFields.style.display = currentHabitType === "bad" ? "block" : "none";
+
+  if (currentHabitType === "bad") {
+    if (!document.getElementById("quitDate").value) setQuitDateValue(todayKey());
+    updateRefusalInfo();
+  } else {
+    hideQuitCalendar();
+  }
+
+  updateViolationsVisibility();
+  updateHabitSaveButton();
+}
+
+function setHabitTypeDragPreview(typePreview) {
+  if (editingIndex !== null) return;
+
+  if (currentHabitType !== typePreview) {
+    currentHabitType = typePreview;
+    updateHabitTypeFieldsOnly();
+  }
+}
+
+function updateHabitTypeTogglePreview(typePreview) {
+  const switcher = document.querySelector("#modal .type-switch");
+  const goodBtn = document.getElementById("goodTypeBtn");
+  const badBtn = document.getElementById("badTypeBtn");
+
+  if (!switcher || !goodBtn || !badBtn) return;
+
+  const isBad = typePreview === "bad";
+
+  switcher.classList.toggle("drag-preview-good", !isBad);
+  switcher.classList.toggle("drag-preview-bad", isBad);
+
+  goodBtn.classList.toggle("active", !isBad);
+  badBtn.classList.toggle("active", isBad);
+}
+
+function clearHabitTypeTogglePreview() {
+  const switcher = document.querySelector("#modal .type-switch");
+  if (!switcher) return;
+  switcher.classList.remove("drag-preview-good", "drag-preview-bad");
+}
+
+function initHabitTypeToggleDrag() {
+  const switcher = document.querySelector("#modal .type-switch");
+  if (!switcher || switcher.dataset.dragReady === "true") return;
+
+  switcher.dataset.dragReady = "true";
+
+  switcher.addEventListener("pointerdown", function(event) {
+    if (editingIndex !== null) return;
+
+    habitTypeToggleDrag.active = true;
+    habitTypeToggleDrag.moved = false;
+    habitTypeToggleDrag.rect = switcher.getBoundingClientRect();
+
+    switcher.classList.add("dragging");
+    switcher.setPointerCapture(event.pointerId);
+    switcher.style.setProperty("--habit-type-shift", currentHabitType === "bad" ? "100%" : "0%");
+    updateHabitTypeTogglePreview(currentHabitType);
+  });
+
+  switcher.addEventListener("pointermove", function(event) {
+    if (!habitTypeToggleDrag.active || !habitTypeToggleDrag.rect) return;
+
+    event.preventDefault();
+    habitTypeToggleDrag.moved = true;
+
+    const rect = habitTypeToggleDrag.rect;
+    const position = (event.clientX - rect.left) / rect.width;
+    const shift = Math.max(0, Math.min(100, position * 200 - 50));
+    const previewType = event.clientX >= rect.left + rect.width / 2 ? "bad" : "good";
+
+    switcher.style.setProperty("--habit-type-shift", shift + "%");
+    updateHabitTypeTogglePreview(previewType);
+    setHabitTypeDragPreview(previewType);
+  }, { passive: false });
+
+  function finishDrag(event) {
+    if (!habitTypeToggleDrag.active || !habitTypeToggleDrag.rect) return;
+
+    const rect = habitTypeToggleDrag.rect;
+    const finalType = event.clientX >= rect.left + rect.width / 2 ? "bad" : "good";
+
+    habitTypeToggleDrag.active = false;
+    habitTypeToggleDrag.rect = null;
+
+    switcher.classList.remove("dragging");
+    clearHabitTypeTogglePreview();
+
+    if (event.pointerId !== undefined) {
+      try { switcher.releasePointerCapture(event.pointerId); } catch (e) {}
+    }
+
+    if (habitTypeToggleDrag.moved) {
+      currentHabitType = finalType;
+      updateHabitTypeUI(false);
+      updateHabitSaveButton();
+    } else {
+      updateHabitTypeToggleUI();
+    }
+
+    habitTypeToggleDrag.moved = false;
+  }
+
+  switcher.addEventListener("pointerup", finishDrag);
+  switcher.addEventListener("pointercancel", finishDrag);
+}
+
+function getHabitFormSnapshot() {
+  return JSON.stringify({
+    type: currentHabitType,
+    title: document.getElementById("habitTitle")?.value.trim() || "",
+    description: document.getElementById("habitDescription")?.value.trim() || "",
+    color: document.getElementById("habitColor")?.value || "black",
+    quitDate: document.getElementById("quitDate")?.value || todayKey(),
+    violations: Number(document.getElementById("violationCount")?.textContent) || 0
+  });
+}
+
+function updateHabitSaveButton() {
+  const button = document.getElementById("saveHabitButton");
+  if (!button) return;
+
+  const title = document.getElementById("habitTitle")?.value.trim() || "";
+  let disabled = !title;
+
+  if (!disabled && editingIndex !== null) {
+    disabled = getHabitFormSnapshot() === originalHabitSnapshot;
+  }
+
+  button.disabled = disabled;
+  button.classList.toggle("disabled-save", disabled);
+}
+
+function getCategoryFormSnapshot() {
+  return JSON.stringify({
+    name: document.getElementById("categoryTitleInput")?.value.trim() || "",
+    color: document.getElementById("categoryColor")?.value || "black"
+  });
+}
+
+function updateCategorySaveButton() {
+  const button = document.getElementById("saveCategoryButton");
+  if (!button) return;
+
+  const name = document.getElementById("categoryTitleInput")?.value.trim() || "";
+  const disabled = !name || getCategoryFormSnapshot() === originalCategorySnapshot;
+
+  button.disabled = disabled;
+  button.classList.toggle("disabled-save", disabled);
+}
+
+function updateNewCategorySaveButton() {
+  const button = document.getElementById("saveNewCategoryButton");
+  if (!button) return;
+
+  const name = document.getElementById("newCategoryName")?.value.trim() || "";
+  const disabled = !name;
+
+  button.disabled = disabled;
+  button.classList.toggle("disabled-save", disabled);
+}
+
+function getSortableCategoryOrder() {
+  const existingIds = customCategories.map(cat => cat.id);
+  const saved = Array.isArray(categoryOrder) ? categoryOrder : [];
+  const sortable = saved.filter(id => id !== "black" && existingIds.includes(id));
+
+  existingIds.forEach(id => {
+    if (!sortable.includes(id)) sortable.push(id);
+  });
+
+  categoryOrder = ["black", ...sortable];
+  return sortable;
+}
+
+function getCategorySortIndex(categoryId) {
+  return getSortableCategoryOrder().indexOf(categoryId);
 }
 
 function normalizeHabits() {
@@ -1174,6 +1854,7 @@ normalizeHabits();
 function save() {
   localStorage.setItem("habits", JSON.stringify(habits));
   localStorage.setItem("categoryNames", JSON.stringify(categoryNames));
+  getSortableCategoryOrder();
   localStorage.setItem("categoryOrder", JSON.stringify(categoryOrder));
   localStorage.setItem("collapsedCategories", JSON.stringify(collapsedCategories));
   localStorage.setItem("appSettings", JSON.stringify(appSettings));
@@ -1198,6 +1879,13 @@ function daysSince(dateKey) {
   today.setHours(0, 0, 0, 0);
   const diff = today - start;
   return Math.max(0, Math.floor(diff / 86400000));
+}
+
+function violationWord(n) {
+  n = Math.abs(Number(n)) || 0;
+  if (n % 10 === 1 && n % 100 !== 11) return "раз";
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return "раза";
+  return "раз";
 }
 
 function dayWord(n) {
@@ -1252,19 +1940,12 @@ function isGoodHabit(habit) {
 function getCategoryListForRender() {
   const list = [{ id: "black", name: "", color: "black" }];
 
-  const usedOldColors = ["red", "green", "blue"].filter(colorKey =>
-    habits.some(habit => isGoodHabit(habit) && habit.color === colorKey)
-  );
+  const orderedIds = getSortableCategoryOrder();
 
-  usedOldColors.forEach(colorKey => {
-    list.push({
-      id: colorKey,
-      name: categoryNames[colorKey] || "Категория",
-      color: colorKey
-    });
-  });
+  orderedIds.forEach(categoryId => {
+    const cat = customCategories.find(item => item.id === categoryId);
+    if (!cat) return;
 
-  customCategories.forEach(cat => {
     const hasHabits = habits.some(habit => isGoodHabit(habit) && habit.color === cat.id);
     if (hasHabits) {
       list.push({
@@ -1280,6 +1961,22 @@ function getCategoryListForRender() {
 
 function getCategoryRenderColor(category) {
   return colorMap[category.color] || colorMap.black;
+}
+
+
+function scrollCalendarToToday(force = false) {
+  const scroll = document.getElementById("rightScroll");
+  if (!scroll) return;
+
+  const { todayIndex } = getDates();
+  const styles = getComputedStyle(document.documentElement);
+  const dayWidth = parseInt(styles.getPropertyValue("--day-width")) || 33;
+  const gap = parseInt(styles.getPropertyValue("--gap")) || 3;
+
+  if (force || !window.initialScrollDone) {
+    scroll.scrollLeft = todayIndex * (dayWidth + gap);
+    window.initialScrollDone = true;
+  }
 }
 
 function render() {
@@ -1322,9 +2019,9 @@ function render() {
 
     if (categoryKey !== "black") {
       leftList.innerHTML += `
-        <div class="category-left" data-category-index="${categoryIndex}" style="color:${color}"
+        <div class="category-left" data-category-index="${getCategorySortIndex(categoryKey)}" style="color:${color}"
           onclick="openCategoryModal('${categoryKey}')"
-          ontouchstart="startCategoryDrag(event, ${categoryIndex})"
+          ontouchstart="startCategoryDrag(event, getCategorySortIndex('${categoryKey}'))"
           ontouchmove="moveCategoryDrag(event)"
           ontouchend="endCategoryDrag(event)">
           <div class="category-title">${category.name}</div>
@@ -1381,19 +2078,14 @@ function render() {
           ontouchend="endBadDrag(event)">${habit.title}</div>
         <div class="bad-status">
           <div>Вы отказались ${count} ${dayWord(count)} назад</div>
-          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} раз</div>` : ""}
+          ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} ${violationWord(habit.violations || 0)}</div>` : ""}
         </div>
       </div>
     `;
   });
 
   setTimeout(() => {
-    const scroll = document.getElementById("rightScroll");
-    if (!window.initialScrollDone) {
-      const dayWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--day-width"));
-      scroll.scrollLeft = todayIndex * (dayWidth + 3);
-      window.initialScrollDone = true;
-    }
+    scrollCalendarToToday(false);
   }, 0);
 }
 
@@ -1405,6 +2097,7 @@ function toggleCategory(event, colorKey) {
 }
 
 function startCategoryDrag(event, index) {
+  if (index < 0) return;
   dragCategoryIndex = index;
   startY = event.touches[0].clientY;
   const row = document.querySelector(`[data-category-index="${index}"]`);
@@ -1417,11 +2110,14 @@ function moveCategoryDrag(event) {
 
   const currentY = event.touches[0].clientY;
   const diff = currentY - startY;
+  const sortable = getSortableCategoryOrder();
 
-  if (diff > 34 && dragCategoryIndex < categoryOrder.length - 1) {
-    const temp = categoryOrder[dragCategoryIndex];
-    categoryOrder[dragCategoryIndex] = categoryOrder[dragCategoryIndex + 1];
-    categoryOrder[dragCategoryIndex + 1] = temp;
+  if (diff > 34 && dragCategoryIndex < sortable.length - 1) {
+    const temp = sortable[dragCategoryIndex];
+    sortable[dragCategoryIndex] = sortable[dragCategoryIndex + 1];
+    sortable[dragCategoryIndex + 1] = temp;
+
+    categoryOrder = ["black", ...sortable];
     dragCategoryIndex++;
     startY = currentY;
     save();
@@ -1429,9 +2125,11 @@ function moveCategoryDrag(event) {
   }
 
   if (diff < -34 && dragCategoryIndex > 0) {
-    const temp = categoryOrder[dragCategoryIndex];
-    categoryOrder[dragCategoryIndex] = categoryOrder[dragCategoryIndex - 1];
-    categoryOrder[dragCategoryIndex - 1] = temp;
+    const temp = sortable[dragCategoryIndex];
+    sortable[dragCategoryIndex] = sortable[dragCategoryIndex - 1];
+    sortable[dragCategoryIndex - 1] = temp;
+
+    categoryOrder = ["black", ...sortable];
     dragCategoryIndex--;
     startY = currentY;
     save();
@@ -1443,6 +2141,7 @@ function endCategoryDrag() {
   dragCategoryIndex = null;
   document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
 }
+
 
 
 function getGoodDragRows(index) {
@@ -1571,8 +2270,8 @@ function moveDrag(event) {
 }
 
 function moveWithinCategory(direction) {
-  // Во время движения больше не делаем render().
-  // Соседние строки двигаются визуально через showGoodSortPreview().
+  // Render больше не вызывается во время движения.
+  // Соседние строки раздвигаются визуально в moveDrag().
 }
 
 function endDrag(event) {
@@ -1722,8 +2421,8 @@ function moveBadDrag(event) {
 }
 
 function moveBadHabit(direction) {
-  // Во время движения больше не делаем render().
-  // Соседние строки двигаются визуально через showBadSortPreview().
+  // Render больше не вызывается во время движения.
+  // Соседние строки раздвигаются визуально в moveBadDrag().
 }
 
 function endBadDrag(event) {
@@ -1774,6 +2473,7 @@ function endBadDrag(event) {
 }
 
 function toggleHabit(habitIndex, dateKey) {
+  if (Date.now() < suppressClickUntil || dragActivated) return;
   if (!isGoodHabit(habits[habitIndex])) return;
 
   if (!habits[habitIndex].done) habits[habitIndex].done = {};
@@ -1795,10 +2495,13 @@ function updateHabitTypeUI(disabled) {
   const goodFields = document.getElementById("goodFields");
   const badFields = document.getElementById("badFields");
 
-  goodBtn.classList.toggle("active", currentHabitType === "good");
-  badBtn.classList.toggle("active", currentHabitType === "bad");
   goodBtn.disabled = disabled;
   badBtn.disabled = disabled;
+
+  const typeSwitch = goodBtn.closest(".type-switch");
+  if (typeSwitch) typeSwitch.classList.toggle("disabled", disabled);
+
+  updateHabitTypeToggleUI();
 
   goodFields.style.display = currentHabitType === "good" ? "block" : "none";
   badFields.style.display = currentHabitType === "bad" ? "block" : "none";
@@ -1814,11 +2517,13 @@ function updateHabitTypeUI(disabled) {
 }
 
 function openModal() {
+  initHabitTypeToggleDrag();
   editingIndex = null;
   currentHabitType = "good";
 
   document.getElementById("modalTitle").textContent = "Новая привычка";
   document.getElementById("habitTitle").value = "";
+  updateHabitTitleCounter();
   document.getElementById("habitDescription").value = "";
   document.getElementById("habitDescription").style.height = "74px";
   updateDescriptionCounter();
@@ -1828,6 +2533,9 @@ function openModal() {
   updateViolationsVisibility();
   document.getElementById("deleteButton").style.display = "none";
 
+  originalHabitSnapshot = "";
+  updateHabitSaveButton();
+
   updateHabitTypeUI(false);
   updateRefusalInfo();
 
@@ -1835,13 +2543,16 @@ function openModal() {
 }
 
 function editHabit(index) {
-  if (dragIndex !== null || dragBadIndex !== null) return;
+  initHabitTypeToggleDrag();
+  if (Date.now() < suppressClickUntil) return;
+  if (dragIndex !== null || dragBadIndex !== null || dragActivated) return;
 
   editingIndex = index;
   currentHabitType = habits[index].type === "bad" ? "bad" : "good";
 
   document.getElementById("modalTitle").textContent = "Редактировать привычку";
   document.getElementById("habitTitle").value = habits[index].title;
+  updateHabitTitleCounter();
   document.getElementById("habitDescription").value = habits[index].description || "";
   updateDescriptionCounter();
   setCategoryValue(habits[index].color || "black");
@@ -1851,6 +2562,9 @@ function editHabit(index) {
   document.getElementById("deleteButton").style.display = "block";
 
   updateHabitTypeUI(true);
+
+  originalHabitSnapshot = getHabitFormSnapshot();
+  updateHabitSaveButton();
 
   showModal("modal");
 
@@ -1907,9 +2621,22 @@ function saveHabit() {
     }
   }
 
+  const shouldScrollToToday = editingIndex === null && currentHabitType === "good";
+
   save();
   closeModal();
+
+  if (shouldScrollToToday) {
+    window.initialScrollDone = false;
+  }
+
   render();
+
+  if (shouldScrollToToday) {
+    setTimeout(() => {
+      scrollCalendarToToday(true);
+    }, 0);
+  }
 }
 
 function deleteCurrentHabit() {
@@ -1932,8 +2659,12 @@ function openCategoryModal(colorKey) {
   const customCategory = customCategories.find(cat => cat.id === colorKey);
   document.getElementById("categoryTitleInput").value =
     customCategory ? customCategory.name : (categoryNames[colorKey] || "Категория");
+  updateCategoryTitleCounter();
 
   setColorValue("categoryColor", customCategory ? (customCategory.color || "black") : colorKey);
+
+  originalCategorySnapshot = getCategoryFormSnapshot();
+  updateCategorySaveButton();
 
   showModal("categoryModal");
 }
@@ -1988,6 +2719,31 @@ function closeCategoryDeleteChoice() {
   hideModal("categoryDeleteChoiceModal");
 }
 
+
+function updateHabitTitleCounter() {
+  const input = document.getElementById("habitTitle");
+  const counter = document.getElementById("habitTitleCounter");
+  if (!input || !counter) return;
+  if (input.value.length > 50) input.value = input.value.slice(0, 50);
+  counter.textContent = `${input.value.length}/50`;
+}
+
+function updateNewCategoryCounter() {
+  const input = document.getElementById("newCategoryName");
+  const counter = document.getElementById("newCategoryCounter");
+  if (!input || !counter) return;
+  if (input.value.length > 50) input.value = input.value.slice(0, 50);
+  counter.textContent = `${input.value.length}/50`;
+}
+
+function updateCategoryTitleCounter() {
+  const input = document.getElementById("categoryTitleInput");
+  const counter = document.getElementById("categoryTitleCounter");
+  if (!input || !counter) return;
+  if (input.value.length > 50) input.value = input.value.slice(0, 50);
+  counter.textContent = `${input.value.length}/50`;
+}
+
 function updateDescriptionCounter() {
   const textarea = document.getElementById("habitDescription");
   if (textarea.value.length > 1000) textarea.value = textarea.value.slice(0, 1000);
@@ -2028,6 +2784,7 @@ function setQuitDateValue(dateKey) {
 
   updateRefusalInfo();
   renderQuitCalendar();
+  updateHabitSaveButton();
 }
 
 function updateRefusalInfo() {
@@ -2115,6 +2872,7 @@ function setViolationsValue(value) {
 
   if (countEl) countEl.textContent = count;
   if (minusBtn) minusBtn.disabled = count <= 0;
+  updateHabitSaveButton();
 }
 
 function changeViolations(delta) {
@@ -2124,6 +2882,15 @@ function changeViolations(delta) {
 
 
 let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [];
+
+if (customCategories.length === 0) {
+  customCategories = [
+    { id: "default_morning", name: "Утро", color: "yellow" },
+    { id: "default_day", name: "День", color: "green" },
+    { id: "default_evening", name: "Вечер", color: "blue" }
+  ];
+  localStorage.setItem("customCategories", JSON.stringify(customCategories));
+}
 
 function refreshCategorySelect(){
  const s=document.getElementById('habitColor');
@@ -2136,6 +2903,10 @@ function handleCategorySelect(sel){
 }
 
 function openNewCategoryModal(){
+ document.getElementById('newCategoryName').value = "";
+ updateNewCategoryCounter();
+ setColorValue("newCategoryColor", "black");
+ updateNewCategorySaveButton();
  showModal("newCategoryModal");
 }
 function closeNewCategoryModal(){
@@ -2156,6 +2927,14 @@ refreshCategorySelect();
 setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "black");
 setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
+initViolationsToggleDrag();
+initHabitTypeToggleDrag();
+updateHabitTitleCounter();
+updateNewCategoryCounter();
+updateCategoryTitleCounter();
+updateNewCategorySaveButton();
+updateCategorySaveButton();
+updateHabitSaveButton();
 
 render();
 </script>
@@ -2207,6 +2986,37 @@ render();
       event.preventDefault();
     }
   }, { passive: false });
+})();
+</script>
+
+
+<script>
+(function () {
+  const allowedSelectors = [
+    "#habitTitle",
+    "#habitDescription",
+    "#newCategoryName",
+    "#categoryTitleInput"
+  ];
+
+  function isAllowedEditable(target) {
+    return allowedSelectors.some(selector => target && target.closest && target.closest(selector));
+  }
+
+  ["copy", "cut", "selectstart", "contextmenu", "dragstart"].forEach(function(eventName) {
+    document.addEventListener(eventName, function(event) {
+      if (isAllowedEditable(event.target)) return;
+      event.preventDefault();
+    }, { passive: false });
+  });
+
+  document.addEventListener("touchstart", function(event) {
+    if (isAllowedEditable(event.target)) return;
+    if (window.getSelection) {
+      const selection = window.getSelection();
+      if (selection) selection.removeAllRanges();
+    }
+  }, { passive: true });
 })();
 </script>
 
