@@ -2183,6 +2183,21 @@ function getSameColorIndexesForDrag() {
     .map(item => item.index);
 }
 
+
+function clampGoodDragDiff(totalDiff) {
+  if (dragOriginalIndex === null) return totalDiff;
+
+  const sameColorIndexes = getSameColorIndexesForDrag();
+  const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
+  if (fromPosition === -1) return totalDiff;
+
+  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+  const minDiff = -fromPosition * rowStep;
+  const maxDiff = (sameColorIndexes.length - 1 - fromPosition) * rowStep;
+
+  return Math.max(minDiff, Math.min(maxDiff, totalDiff));
+}
+
 function showGoodSortPreview(targetPosition) {
   clearSortPreview();
 
@@ -2253,14 +2268,15 @@ function moveDrag(event) {
   event.preventDefault();
   if (dragIndex === null || dragOriginalIndex === null) return;
 
-  setGoodDragY(dragIndex, `${totalDiff}px`);
+  const clampedDiff = clampGoodDragDiff(totalDiff);
+  setGoodDragY(dragIndex, `${clampedDiff}px`);
 
   const sameColorIndexes = getSameColorIndexesForDrag();
   const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
   if (fromPosition === -1) return;
 
   const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
-  const moveSteps = Math.round(totalDiff / rowStep);
+  const moveSteps = Math.round(clampedDiff / rowStep);
   const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
 
   if (targetPosition !== dragPreviewTargetPosition) {
@@ -2299,7 +2315,10 @@ function endDrag(event) {
     const fromPosition = sameColorIndexes.indexOf(originalIndex);
 
     if (fromPosition !== -1) {
-      const moveSteps = Math.round(totalDiff / rowStep);
+      const minDiff = -fromPosition * rowStep;
+      const maxDiff = (sameColorIndexes.length - 1 - fromPosition) * rowStep;
+      const clampedDiff = Math.max(minDiff, Math.min(maxDiff, totalDiff));
+      const moveSteps = Math.round(clampedDiff / rowStep);
       const targetPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
 
       if (targetPosition !== fromPosition) {
