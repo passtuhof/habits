@@ -2555,13 +2555,9 @@ function getGoodDropPositionInCategory(categoryId, clientY) {
 
   if (!rows.length) return 0;
 
-  // Единый порог сортировки: 50% высоты строки.
-  // Так перенос внутри категории и между категориями ощущается одинаково.
-  const shiftTrigger = 0.5;
-
   for (let i = 0; i < rows.length; i++) {
     const rect = rows[i].getBoundingClientRect();
-    if (clientY < rect.top + rect.height * shiftTrigger) return i;
+    if (clientY < rect.top + rect.height / 2) return i;
   }
 
   return rows.length;
@@ -2608,19 +2604,7 @@ function addGoodVisualShift(leftRow, className) {
   getGoodVisualPairRows(leftRow).forEach(row => row.classList.add(className));
 }
 
-function getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition) {
-  const targetHabitRows = leftRowsWithoutDragged.filter(row => row.classList.contains("habit-left") && row.dataset.categoryId === categoryId);
-  if (targetHabitRows.length) {
-    if (targetPosition <= 0) return leftRowsWithoutDragged.indexOf(targetHabitRows[0]);
-    if (targetPosition >= targetHabitRows.length) return leftRowsWithoutDragged.indexOf(targetHabitRows[targetHabitRows.length - 1]) + 1;
-    return leftRowsWithoutDragged.indexOf(targetHabitRows[targetPosition]);
-  }
-  const categoryHeader = leftRowsWithoutDragged.find(row => row.classList.contains("category-left") && row.dataset.categoryId === categoryId);
-  if (categoryHeader) return leftRowsWithoutDragged.indexOf(categoryHeader) + 1;
-  return categoryId === "black" ? 0 : leftRowsWithoutDragged.length;
-}
-
-function getGoodVisualDropInfo(clientY) {
+function getGoodVisualDropInfoByStep(totalDiff) {
   const leftRows = getGoodVisualLeftRows();
   const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
   if (!draggedRow) return null;
@@ -2630,25 +2614,26 @@ function getGoodVisualDropInfo(clientY) {
     return { categoryId: dragColor || "black", targetPosition: 0, insertIndex: 0 };
   }
 
-  let insertIndex = rowsWithoutDragged.length;
-  for (let i = 0; i < rowsWithoutDragged.length; i++) {
-    const rect = rowsWithoutDragged[i].getBoundingClientRect();
-    if (clientY < rect.top + rect.height / 2) {
-      insertIndex = i;
-      break;
-    }
-  }
+  const originalVisualIndex = leftRows.indexOf(draggedRow);
+  if (originalVisualIndex === -1) return null;
+
+  const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 34;
+  const moveSteps = Math.round(totalDiff / rowStep);
+  const insertIndex = Math.max(0, Math.min(rowsWithoutDragged.length, originalVisualIndex + moveSteps));
 
   function categoryBefore(index) {
     let categoryId = "black";
+
     for (let i = 0; i < index; i++) {
       const row = rowsWithoutDragged[i];
+
       if (row.classList.contains("category-left")) {
         categoryId = row.dataset.categoryId || categoryId;
       } else if (row.classList.contains("habit-left")) {
         categoryId = row.dataset.categoryId || categoryId;
       }
     }
+
     return categoryId;
   }
 
@@ -2671,17 +2656,30 @@ function getGoodVisualDropInfo(clientY) {
   return { categoryId, targetPosition, insertIndex };
 }
 
-function showGoodVisualPreviewByInsertIndex(targetInsertIndex) {
+function getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition) {
+  const targetHabitRows = leftRowsWithoutDragged.filter(row => row.classList.contains("habit-left") && row.dataset.categoryId === categoryId);
+  if (targetHabitRows.length) {
+    if (targetPosition <= 0) return leftRowsWithoutDragged.indexOf(targetHabitRows[0]);
+    if (targetPosition >= targetHabitRows.length) return leftRowsWithoutDragged.indexOf(targetHabitRows[targetHabitRows.length - 1]) + 1;
+    return leftRowsWithoutDragged.indexOf(targetHabitRows[targetPosition]);
+  }
+  const categoryHeader = leftRowsWithoutDragged.find(row => row.classList.contains("category-left") && row.dataset.categoryId === categoryId);
+  if (categoryHeader) return leftRowsWithoutDragged.indexOf(categoryHeader) + 1;
+  return categoryId === "black" ? 0 : leftRowsWithoutDragged.length;
+}
+
+function showGoodCrossCategoryVisualPreview(categoryId, targetPosition, targetInsertIndex = null) {
   const leftRows = getGoodVisualLeftRows();
   const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
   if (!draggedRow) return false;
-
   const originalVisualIndex = leftRows.indexOf(draggedRow);
   if (originalVisualIndex === -1) return false;
 
   const leftRowsWithoutDragged = leftRows.filter(row => row !== draggedRow);
   const originalIndexByRow = new Map(leftRows.map((row, index) => [row, index]));
-  const safeTargetInsertIndex = Math.max(0, Math.min(leftRowsWithoutDragged.length, targetInsertIndex));
+  const safeTargetInsertIndex = targetInsertIndex !== null && targetInsertIndex !== undefined
+    ? Math.max(0, Math.min(leftRowsWithoutDragged.length, targetInsertIndex))
+    : getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition);
 
   if (safeTargetInsertIndex > originalVisualIndex) {
     leftRowsWithoutDragged.forEach((row, indexWithoutDragged) => {
@@ -2700,20 +2698,6 @@ function showGoodVisualPreviewByInsertIndex(targetInsertIndex) {
   }
 
   return true;
-}
-
-function showGoodCrossCategoryVisualPreview(categoryId, targetPosition, targetInsertIndex = null) {
-  if (targetInsertIndex !== null && targetInsertIndex !== undefined) {
-    return showGoodVisualPreviewByInsertIndex(targetInsertIndex);
-  }
-
-  const leftRows = getGoodVisualLeftRows();
-  const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
-  if (!draggedRow) return false;
-
-  const leftRowsWithoutDragged = leftRows.filter(row => row !== draggedRow);
-  const targetVisualInsertIndex = getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition);
-  return showGoodVisualPreviewByInsertIndex(targetVisualInsertIndex);
 }
 
 function showGoodSortPreview(categoryId, targetPosition, targetInsertIndex = null) {
@@ -2831,29 +2815,25 @@ function moveDrag(event) {
 
   setGoodDragY(dragIndex, `${totalDiff}px`);
 
-  let targetCategoryId = getGoodCategoryAtClientY(currentY) || dragColor || "black";
   const sourceCategoryId = dragColor || "black";
+  const visualDrop = getGoodVisualDropInfoByStep(totalDiff);
+
+  let targetCategoryId = visualDrop?.categoryId || getGoodCategoryAtClientY(currentY) || sourceCategoryId;
   let targetPosition;
   let targetInsertIndex = null;
 
   if (targetCategoryId === sourceCategoryId) {
     const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
     const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
-    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 34;
     const moveSteps = Math.round(totalDiff / rowStep);
 
     targetPosition = fromPosition === -1
       ? getGoodDropPositionInCategory(targetCategoryId, currentY)
       : Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
   } else {
-    const visualDrop = getGoodVisualDropInfo(currentY);
-    if (visualDrop) {
-      targetCategoryId = visualDrop.categoryId || targetCategoryId;
-      targetPosition = visualDrop.targetPosition;
-      targetInsertIndex = visualDrop.insertIndex;
-    } else {
-      targetPosition = getGoodDropPositionInCategory(targetCategoryId, currentY);
-    }
+    targetPosition = visualDrop ? visualDrop.targetPosition : getGoodDropPositionInCategory(targetCategoryId, currentY);
+    targetInsertIndex = visualDrop ? visualDrop.insertIndex : null;
   }
 
   window.dragTargetCategoryId = targetCategoryId;
@@ -2884,15 +2864,11 @@ function endDrag(event) {
 
   if (wasDragged && originalIndex !== null && habits[originalIndex]) {
     const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const totalDiff = finalY - dragStartY;
-    const visualDrop = getGoodVisualDropInfo(finalY);
-    const targetCategoryId = visualDrop
-      ? (visualDrop.categoryId || window.dragTargetCategoryId || dragColor || "black")
-      : (getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black");
+    const finalDiff = finalY - dragStartY;
+    const visualDrop = getGoodVisualDropInfoByStep(finalDiff);
     const sourceCategoryId = dragColor || "black";
-    const targetPosition = visualDrop
-      ? visualDrop.targetPosition
-      : getGoodDropPositionInCategory(targetCategoryId, finalY);
+    const targetCategoryId = visualDrop?.categoryId || getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || sourceCategoryId;
+    const targetPosition = visualDrop ? visualDrop.targetPosition : getGoodDropPositionInCategory(targetCategoryId, finalY);
 
     if (targetCategoryId === sourceCategoryId) {
       const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
@@ -2900,7 +2876,7 @@ function endDrag(event) {
 
       if (fromPosition !== -1) {
         const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 34;
-        const moveSteps = Math.round(totalDiff / rowStep);
+        const moveSteps = Math.round(finalDiff / rowStep);
         const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
 
         if (finalPosition !== fromPosition) {
@@ -2911,13 +2887,10 @@ function endDrag(event) {
         }
       }
     } else {
-      const finalTargetCategoryId = targetCategoryId;
-      const finalTargetPosition = targetPosition;
-
       const [movedHabit] = habits.splice(originalIndex, 1);
-      movedHabit.color = finalTargetCategoryId;
+      movedHabit.color = targetCategoryId;
 
-      let insertIndex = getGlobalInsertIndexForGoodHabit(finalTargetCategoryId, finalTargetPosition);
+      let insertIndex = getGlobalInsertIndexForGoodHabit(targetCategoryId, targetPosition);
       if (insertIndex > originalIndex) insertIndex--;
 
       habits.splice(insertIndex, 0, movedHabit);
