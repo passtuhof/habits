@@ -1097,6 +1097,13 @@ button.disabled-save {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
 
+/* Когда хорошую привычку уводят в другую категорию,
+   её исходное место схлопывается — пустая строка не остаётся. */
+.habit-left.dragging.drag-source-collapsed,
+.check-row.dragging.drag-source-collapsed {
+  margin-bottom: calc(var(--row-height) * -1);
+}
+
 /* Доработка drag привычек: привычка поверх заголовков категорий */
 .category-left {
   z-index: 1;
@@ -2500,8 +2507,15 @@ function clearSortPreview() {
 
 function clearGoodDragStyles() {
   document.querySelectorAll(".habit-left, .check-row").forEach(row => {
-    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
+    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down", "drag-source-collapsed");
     row.style.removeProperty("--drag-y");
+  });
+}
+
+function setGoodSourceCollapsed(isCollapsed) {
+  if (dragIndex === null) return;
+  getGoodDragRows(dragIndex).forEach(row => {
+    row.classList.toggle("drag-source-collapsed", !!isCollapsed);
   });
 }
 
@@ -2716,6 +2730,7 @@ function startDrag(event, index) {
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
     setGoodDragY(dragIndex, "0px");
+    setGoodSourceCollapsed(false);
     setActiveGoodDragColor(dragColor);
 
     if (navigator.vibrate) navigator.vibrate(12);
@@ -2754,6 +2769,7 @@ function moveDrag(event) {
 
   window.dragTargetCategoryId = targetCategoryId;
   window.dragTargetPosition = targetPosition;
+  setGoodSourceCollapsed(targetCategoryId !== (dragColor || "black"));
   setActiveGoodDragColor(targetCategoryId);
 
   const previewKey = `${targetCategoryId}:${targetPosition}`;
