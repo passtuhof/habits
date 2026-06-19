@@ -355,6 +355,40 @@ textarea {
   margin-bottom: 6px;
 }
 
+.quit-date-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.no-count-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #111;
+}
+
+.no-count-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #111;
+}
+
+#quitDateDisplay:disabled {
+  background: #f3f3f3;
+  color: #999;
+  border-color: #ddd;
+  cursor: default;
+}
+
 .quit-date-wrap { position: relative; }
 #quitDateDisplay {
   cursor: pointer;
@@ -1349,7 +1383,13 @@ body.bad-habit-dragging .bad-habit-row.dragging {
     </div>
 
     <div id="badFields" style="display:none;">
-      <div class="label">Дата отказа</div>
+      <div class="quit-date-label-row">
+        <div class="label" style="margin-bottom:0;">Дата отказа</div>
+        <label class="no-count-toggle">
+          <input id="noCountCheckbox" type="checkbox" onchange="toggleNoCount()">
+          <span>Без подсчета</span>
+        </label>
+      </div>
       <div class="quit-date-wrap">
         <input id="quitDateDisplay" readonly onclick="toggleQuitCalendar()">
         <input id="quitDate" type="hidden">
@@ -1838,6 +1878,7 @@ function updateHabitTypeFieldsOnly() {
 
   if (currentHabitType === "bad") {
     if (!document.getElementById("quitDate").value) setQuitDateValue(todayKey());
+    updateNoCountUI();
     updateRefusalInfo();
   } else {
     hideQuitCalendar();
@@ -1951,6 +1992,7 @@ function getHabitFormSnapshot() {
     description: document.getElementById("habitDescription")?.value.trim() || "",
     color: document.getElementById("habitColor")?.value || "black",
     quitDate: document.getElementById("quitDate")?.value || todayKey(),
+    noCount: document.getElementById("noCountCheckbox")?.checked || false,
     violations: Number(document.getElementById("violationCount")?.textContent) || 0
   });
 }
@@ -2031,6 +2073,7 @@ function normalizeHabits() {
     if (!habit.type) habit.type = "good";
     if (habit.type === "bad" && !habit.quitDate) habit.quitDate = todayKey();
     if (habit.type === "bad" && habit.violations === undefined) habit.violations = 0;
+    if (habit.type === "bad" && habit.noCount === undefined) habit.noCount = false;
     return habit;
   });
 }
@@ -2254,6 +2297,7 @@ function render() {
   badHabits.forEach((habit, badPosition) => {
     const realIndex = habits.indexOf(habit);
     const count = daysSince(habit.quitDate || todayKey());
+    const refusalText = habit.noCount ? "" : `<div>Вы отказались ${count} ${dayWord(count)} назад</div>`;
 
     badList.innerHTML += `
       <div class="bad-habit-row" data-bad-index="${badPosition}">
@@ -2263,7 +2307,7 @@ function render() {
           ontouchmove="moveBadDrag(event)"
           ontouchend="endBadDrag(event)">${habit.title}</div>
         <div class="bad-status">
-          <div>Вы отказались ${count} ${dayWord(count)} назад</div>
+          ${refusalText}
           ${appSettings.showViolations ? `<div>Вы нарушили ${habit.violations || 0} ${violationWord(habit.violations || 0)}</div>` : ""}
         </div>
       </div>
@@ -3145,6 +3189,7 @@ function updateHabitTypeUI(disabled) {
 
   if (currentHabitType === "bad") {
     if (!document.getElementById("quitDate").value) setQuitDateValue(todayKey());
+    updateNoCountUI();
     updateRefusalInfo();
   } else {
     hideQuitCalendar();
@@ -3166,6 +3211,7 @@ function openModal() {
   updateDescriptionCounter();
   setCategoryValue("black");
   setQuitDateValue(todayKey());
+  setNoCountValue(false);
   setViolationsValue(0);
   updateViolationsVisibility();
   document.getElementById("deleteButton").style.display = "none";
@@ -3194,6 +3240,7 @@ function editHabit(index) {
   updateDescriptionCounter();
   setCategoryValue(habits[index].color || "black");
   setQuitDateValue(habits[index].quitDate || todayKey());
+  setNoCountValue(habits[index].noCount || false);
   setViolationsValue(habits[index].violations || 0);
   updateViolationsVisibility();
   document.getElementById("deleteButton").style.display = "block";
@@ -3216,6 +3263,7 @@ function saveHabit() {
   const description = document.getElementById("habitDescription").value.trim();
   const color = document.getElementById("habitColor").value;
   const quitDate = document.getElementById("quitDate").value || todayKey();
+  const noCount = document.getElementById("noCountCheckbox")?.checked || false;
   const violations = Number(document.getElementById("violationCount").textContent) || 0;
 
   if (!title) return;
@@ -3228,9 +3276,11 @@ function saveHabit() {
       habits[editingIndex].type = "good";
       habits[editingIndex].color = color;
       delete habits[editingIndex].quitDate;
+      delete habits[editingIndex].noCount;
     } else {
       habits[editingIndex].type = "bad";
       habits[editingIndex].quitDate = quitDate;
+      habits[editingIndex].noCount = noCount;
       habits[editingIndex].violations = violations;
       habits[editingIndex].color = "black";
       delete habits[editingIndex].done;
@@ -3253,6 +3303,7 @@ function saveHabit() {
         description,
         color: "black",
         quitDate,
+        noCount,
         violations: 0
       });
     }
@@ -3426,12 +3477,24 @@ function setQuitDateValue(dateKey) {
 }
 
 function updateRefusalInfo() {
+  const refusalInfo = document.getElementById("refusalInfo");
+  if (!refusalInfo) return;
+
+  const noCount = document.getElementById("noCountCheckbox")?.checked || false;
+  refusalInfo.style.display = noCount ? "none" : "block";
+
+  if (noCount) {
+    refusalInfo.textContent = "";
+    return;
+  }
+
   const quitDate = document.getElementById("quitDate").value || todayKey();
   const count = daysSince(quitDate);
-  document.getElementById("refusalInfo").textContent = `Вы отказались ${count} ${dayWord(count)} назад`;
+  refusalInfo.textContent = `Вы отказались ${count} ${dayWord(count)} назад`;
 }
 
 function toggleQuitCalendar() {
+  if (document.getElementById("noCountCheckbox")?.checked) return;
   renderQuitCalendar();
   showModal("quitCalendarModal");
 }
@@ -3502,6 +3565,34 @@ function renderQuitCalendar() {
   calendar.innerHTML = html;
 }
 
+
+function setNoCountValue(value) {
+  const checkbox = document.getElementById("noCountCheckbox");
+  if (checkbox) checkbox.checked = !!value;
+  updateNoCountUI();
+  updateHabitSaveButton();
+}
+
+function toggleNoCount() {
+  updateNoCountUI();
+  updateHabitSaveButton();
+}
+
+function updateNoCountUI() {
+  const checkbox = document.getElementById("noCountCheckbox");
+  const dateDisplay = document.getElementById("quitDateDisplay");
+  const refusalInfo = document.getElementById("refusalInfo");
+
+  const noCount = !!checkbox?.checked;
+
+  if (dateDisplay) {
+    dateDisplay.disabled = noCount;
+  }
+
+  if (refusalInfo) {
+    refusalInfo.style.display = noCount ? "none" : "block";
+  }
+}
 
 function setViolationsValue(value) {
   const count = Math.max(0, Number(value) || 0);
