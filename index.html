@@ -1097,34 +1097,14 @@ button.disabled-save {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
 
-/* Доработка drag привычки: перетаскиваемая строка уходит в отдельный верхний слой,
-   поэтому в исходной категории не остается пустой строки */
+/* Доработка drag привычек: привычка поверх заголовков категорий */
+.category-left {
+  z-index: 1;
+}
+
 .habit-left.dragging,
 .check-row.dragging {
-  position: fixed !important;
-  left: var(--drag-left) !important;
-  top: var(--drag-top) !important;
-  width: var(--drag-width) !important;
-  height: var(--drag-height) !important;
-  z-index: 10000 !important;
-  pointer-events: none;
-  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
-}
-
-.habit-left.dragging {
-  background: #fff !important;
-}
-
-.check-row.dragging {
-  background: #fff !important;
-}
-
-.category-left {
-  z-index: 10;
-}
-
-.category-left.dragging {
-  z-index: 9000;
+  z-index: 300 !important;
 }
 
 </style>
@@ -1362,6 +1342,9 @@ let dragCategoryLastY = 0;
 let categoryDragPreviewTargetPosition = null;
 let categoryDragPressTimer = null;
 let collapsedCategoriesBeforeCategoryDrag = null;
+let collapsedCategoriesBeforeHabitDrag = null;
+let habitDragOpenedCategories = false;
+let habitDragBaseCenterY = 0;
 let startY = 0;
 
 let dragPressTimer = null;
@@ -2208,6 +2191,128 @@ function restoreCategoriesAfterDrag() {
   collapsedCategoriesBeforeCategoryDrag = null;
 }
 
+function openAllCategoriesForHabitDrag() {
+  if (habitDragOpenedCategories) return;
+
+  collapsedCategoriesBeforeHabitDrag = JSON.parse(JSON.stringify(collapsedCategories || {}));
+
+  getCategoryListForRender().forEach(category => {
+    if (category.id !== "black") collapsedCategories[category.id] = false;
+  });
+
+  habitDragOpenedCategories = true;
+}
+
+function restoreCategoriesAfterHabitDrag() {
+  if (collapsedCategoriesBeforeHabitDrag) {
+    collapsedCategories = collapsedCategoriesBeforeHabitDrag;
+  }
+
+  collapsedCategoriesBeforeHabitDrag = null;
+  habitDragOpenedCategories = false;
+}
+
+function isPointerOnRightCalendar(clientX) {
+  const rightScroll = document.getElementById("rightScroll");
+  if (!rightScroll) return false;
+
+  const rect = rightScroll.getBoundingClientRect();
+  return clientX >= rect.left;
+}
+
+function getRenderedGoodCategoryIds() {
+  const ids = [];
+
+  document.querySelectorAll("#leftList .habit-left, #leftList .category-left").forEach(row => {
+    const id = row.dataset.categoryId || "black";
+    if (!ids.includes(id)) ids.push(id);
+  });
+
+  return ids.length ? ids : ["black"];
+}
+
+function getLastRenderedGoodCategoryId() {
+  const ids = getRenderedGoodCategoryIds();
+  return ids[ids.length - 1] || "black";
+}
+
+function getLeftListBottomY() {
+  const leftList = document.getElementById("leftList");
+  if (!leftList) return null;
+
+  const rows = Array.from(leftList.children).filter(child => {
+    return child.classList.contains("category-left") || child.classList.contains("habit-left");
+  });
+
+  if (!rows.length) return null;
+
+  return rows[rows.length - 1].getBoundingClientRect().bottom;
+}
+
+function getGoodDropSlotCenterY(categoryId, targetPosition) {
+  const rows = Array.from(document.querySelectorAll(`.habit-left[data-category-id="${categoryId}"]`))
+    .filter(row => Number(row.dataset.index) !== dragOriginalIndex);
+
+  const rowHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+
+  if (rows.length) {
+    if (targetPosition <= 0) {
+      const rect = rows[0].getBoundingClientRect();
+      return rect.top + rowHeight / 2;
+    }
+
+    if (targetPosition >= rows.length) {
+      const rect = rows[rows.length - 1].getBoundingClientRect();
+      return rect.bottom + rowHeight / 2;
+    }
+
+    const rect = rows[targetPosition].getBoundingClientRect();
+    return rect.top + rowHeight / 2;
+  }
+
+  if (categoryId === "black") {
+    const leftList = document.getElementById("leftList");
+    if (!leftList) return habitDragBaseCenterY;
+
+    const firstCategory = leftList.querySelector(".category-left");
+    if (firstCategory) return firstCategory.getBoundingClientRect().top - rowHeight / 2;
+
+    const corner = document.querySelector(".corner");
+    if (corner) return corner.getBoundingClientRect().bottom + rowHeight / 2;
+
+    return habitDragBaseCenterY;
+  }
+
+  const categoryRow = document.querySelector(`.category-left[data-category-id="${categoryId}"]`);
+  if (categoryRow) {
+    const rect = categoryRow.getBoundingClientRect();
+    return rect.bottom + rowHeight / 2;
+  }
+
+  return habitDragBaseCenterY;
+}
+
+function getGoodDragTarget(clientX, clientY) {
+  if (isPointerOnRightCalendar(clientX)) {
+    return { categoryId: "black", position: 0 };
+  }
+
+  const bottomY = getLeftListBottomY();
+  if (bottomY !== null && clientY > bottomY) {
+    const lastCategoryId = getLastRenderedGoodCategoryId();
+    return {
+      categoryId: lastCategoryId,
+      position: getGoodIndexesByCategory(lastCategoryId, dragOriginalIndex).length
+    };
+  }
+
+  const categoryId = getGoodCategoryAtClientY(clientY) || dragColor || "black";
+  return {
+    categoryId,
+    position: getGoodDropPositionInCategory(categoryId, clientY)
+  };
+}
+
 function clampCategoryDragDiff(totalDiff) {
   const visibleCategories = getVisibleSortableCategoryOrder();
   const fromPosition = dragCategoryOriginalIndex;
@@ -2387,25 +2492,6 @@ function setGoodDragY(index, value) {
   getGoodDragRows(index).forEach(row => row.style.setProperty("--drag-y", value));
 }
 
-function setGoodDragFixedBox(index) {
-  getGoodDragRows(index).forEach(row => {
-    const rect = row.getBoundingClientRect();
-    row.style.setProperty("--drag-left", rect.left + "px");
-    row.style.setProperty("--drag-top", rect.top + "px");
-    row.style.setProperty("--drag-width", rect.width + "px");
-    row.style.setProperty("--drag-height", rect.height + "px");
-  });
-}
-
-function clearGoodDragFixedBox() {
-  document.querySelectorAll(".habit-left, .check-row").forEach(row => {
-    row.style.removeProperty("--drag-left");
-    row.style.removeProperty("--drag-top");
-    row.style.removeProperty("--drag-width");
-    row.style.removeProperty("--drag-height");
-  });
-}
-
 function clearSortPreview() {
   document.querySelectorAll(".sort-shift-up, .sort-shift-down").forEach(row => {
     row.classList.remove("sort-shift-up", "sort-shift-down");
@@ -2416,10 +2502,6 @@ function clearGoodDragStyles() {
   document.querySelectorAll(".habit-left, .check-row").forEach(row => {
     row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
     row.style.removeProperty("--drag-y");
-    row.style.removeProperty("--drag-left");
-    row.style.removeProperty("--drag-top");
-    row.style.removeProperty("--drag-width");
-    row.style.removeProperty("--drag-height");
   });
 }
 
@@ -2554,6 +2636,17 @@ function showGoodSortPreview(categoryId, targetPosition) {
     return;
   }
 
+  // Когда привычка уходит в другую категорию, закрываем пустую строку
+  // там, откуда её взяли: все привычки ниже поднимаются на одну строку.
+  const sourceIndexes = getGoodIndexesByCategory(sourceCategoryId);
+  const sourceFromPosition = sourceIndexes.indexOf(dragOriginalIndex);
+  if (sourceFromPosition !== -1) {
+    for (let position = sourceFromPosition + 1; position < sourceIndexes.length; position++) {
+      const index = sourceIndexes[position];
+      getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-up"));
+    }
+  }
+
   const targetIndexes = getGoodIndexesByCategory(categoryId, dragOriginalIndex);
   for (let position = targetPosition; position < targetIndexes.length; position++) {
     const index = targetIndexes[position];
@@ -2609,7 +2702,17 @@ function startDrag(event, index) {
     dragIndex = pendingDragIndex;
     dragActivated = true;
 
-    setGoodDragFixedBox(dragIndex);
+    const originalRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
+    if (originalRow) {
+      const rect = originalRow.getBoundingClientRect();
+      habitDragBaseCenterY = rect.top + rect.height / 2;
+    } else {
+      habitDragBaseCenterY = dragStartY;
+    }
+
+    openAllCategoriesForHabitDrag();
+    render();
+
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
     setGoodDragY(dragIndex, "0px");
@@ -2632,6 +2735,7 @@ function moveDrag(event) {
       dragOriginalIndex = null;
       dragColor = null;
       window.dragTargetCategoryId = null;
+      window.dragTargetPosition = null;
     }
     return;
   }
@@ -2639,12 +2743,17 @@ function moveDrag(event) {
   event.preventDefault();
   if (dragIndex === null || dragOriginalIndex === null) return;
 
-  setGoodDragY(dragIndex, `${totalDiff}px`);
+  const clientX = event.touches[0].clientX;
+  const target = getGoodDragTarget(clientX, currentY);
+  const targetCategoryId = target.categoryId;
+  const targetPosition = target.position;
 
-  const targetCategoryId = getGoodCategoryAtClientY(currentY) || dragColor || "black";
-  const targetPosition = getGoodDropPositionInCategory(targetCategoryId, currentY);
+  const slotCenterY = getGoodDropSlotCenterY(targetCategoryId, targetPosition);
+  const visualDiff = slotCenterY - habitDragBaseCenterY;
+  setGoodDragY(dragIndex, `${visualDiff}px`);
 
   window.dragTargetCategoryId = targetCategoryId;
+  window.dragTargetPosition = targetPosition;
   setActiveGoodDragColor(targetCategoryId);
 
   const previewKey = `${targetCategoryId}:${targetPosition}`;
@@ -2671,10 +2780,13 @@ function endDrag(event) {
   }
 
   if (wasDragged && originalIndex !== null && habits[originalIndex]) {
-    const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
-    const targetCategoryId = getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black";
+    const finalTouch = event?.changedTouches?.[0];
+    const finalY = finalTouch?.clientY ?? dragLastY;
+    const finalX = finalTouch?.clientX ?? 0;
+    const target = getGoodDragTarget(finalX, finalY);
+    const targetCategoryId = target.categoryId || window.dragTargetCategoryId || dragColor || "black";
     const sourceCategoryId = dragColor || "black";
-    const targetPosition = getGoodDropPositionInCategory(targetCategoryId, finalY);
+    const targetPosition = target.position ?? window.dragTargetPosition ?? getGoodDropPositionInCategory(targetCategoryId, finalY);
 
     if (targetCategoryId === sourceCategoryId) {
       const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
@@ -2710,7 +2822,9 @@ function endDrag(event) {
   dragPreviewTargetPosition = null;
   dragLastY = 0;
   window.dragTargetCategoryId = null;
+  window.dragTargetPosition = null;
 
+  restoreCategoriesAfterHabitDrag();
   clearGoodDragStyles();
 
   if (changed || wasDragged) {
