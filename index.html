@@ -2555,9 +2555,13 @@ function getGoodDropPositionInCategory(categoryId, clientY) {
 
   if (!rows.length) return 0;
 
+  // Более ранний и отзывчивый сдвиг хороших привычек.
+  // Было 50% высоты строки, стало около 35% — ближе к ощущению сортировки плохих привычек.
+  const shiftTrigger = 0.35;
+
   for (let i = 0; i < rows.length; i++) {
     const rect = rows[i].getBoundingClientRect();
-    if (clientY < rect.top + rect.height / 2) return i;
+    if (clientY < rect.top + rect.height * shiftTrigger) return i;
   }
 
   return rows.length;
