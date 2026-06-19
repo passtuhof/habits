@@ -2762,7 +2762,21 @@ function moveDrag(event) {
   setGoodDragY(dragIndex, `${totalDiff}px`);
 
   const targetCategoryId = getGoodCategoryAtClientY(currentY) || dragColor || "black";
-  const targetPosition = getGoodDropPositionInCategory(targetCategoryId, currentY);
+  const sourceCategoryId = dragColor || "black";
+  let targetPosition;
+
+  if (targetCategoryId === sourceCategoryId) {
+    const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
+    const fromPosition = sameColorIndexes.indexOf(dragOriginalIndex);
+    const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+    const moveSteps = Math.round(totalDiff / rowStep);
+
+    targetPosition = fromPosition === -1
+      ? getGoodDropPositionInCategory(targetCategoryId, currentY)
+      : Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
+  } else {
+    targetPosition = getGoodDropPositionInCategory(targetCategoryId, currentY);
+  }
 
   window.dragTargetCategoryId = targetCategoryId;
   setActiveGoodDragColor(targetCategoryId);
@@ -2792,16 +2806,19 @@ function endDrag(event) {
 
   if (wasDragged && originalIndex !== null && habits[originalIndex]) {
     const finalY = event?.changedTouches?.[0]?.clientY ?? dragLastY;
+    const totalDiff = finalY - dragStartY;
     const targetCategoryId = getGoodCategoryAtClientY(finalY) || window.dragTargetCategoryId || dragColor || "black";
     const sourceCategoryId = dragColor || "black";
-    const targetPosition = getGoodDropPositionInCategory(targetCategoryId, finalY);
+    let targetPosition = getGoodDropPositionInCategory(targetCategoryId, finalY);
 
     if (targetCategoryId === sourceCategoryId) {
       const sameColorIndexes = getGoodIndexesByCategory(sourceCategoryId);
       const fromPosition = sameColorIndexes.indexOf(originalIndex);
 
       if (fromPosition !== -1) {
-        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, targetPosition));
+        const rowStep = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 44;
+        const moveSteps = Math.round(totalDiff / rowStep);
+        const finalPosition = Math.max(0, Math.min(sameColorIndexes.length - 1, fromPosition + moveSteps));
 
         if (finalPosition !== fromPosition) {
           const targetIndex = sameColorIndexes[finalPosition];
