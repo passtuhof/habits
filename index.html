@@ -1097,6 +1097,38 @@ button.disabled-save {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
 
+
+/* Плавное смещение заголовков категорий при переносе привычек между категориями */
+.category-spacer {
+  will-change: transform;
+  transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
+}
+
+.category-left.habit-sort-shift-up,
+.category-spacer.habit-sort-shift-up,
+.habit-left.habit-sort-shift-up,
+.check-row.habit-sort-shift-up {
+  transform: translateY(calc(var(--row-height) * -1));
+}
+
+.category-left.habit-sort-shift-down,
+.category-spacer.habit-sort-shift-down,
+.habit-left.habit-sort-shift-down,
+.check-row.habit-sort-shift-down {
+  transform: translateY(var(--row-height));
+}
+
+.category-left.habit-sort-shift-up,
+.category-left.habit-sort-shift-down,
+.category-spacer.habit-sort-shift-up,
+.category-spacer.habit-sort-shift-down,
+.habit-left.habit-sort-shift-up,
+.habit-left.habit-sort-shift-down,
+.check-row.habit-sort-shift-up,
+.check-row.habit-sort-shift-down {
+  transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
+}
+
 </style>
 </head>
 <body>
@@ -2086,7 +2118,7 @@ function render() {
         </div>
       `;
 
-      checksList.innerHTML += `<div class="category-spacer"></div>`;
+      checksList.innerHTML += `<div class="category-spacer" data-category-id="${categoryKey}"></div>`;
     }
 
     if (isCollapsed) return;
@@ -2358,14 +2390,14 @@ function setGoodDragY(index, value) {
 }
 
 function clearSortPreview() {
-  document.querySelectorAll(".sort-shift-up, .sort-shift-down").forEach(row => {
-    row.classList.remove("sort-shift-up", "sort-shift-down");
+  document.querySelectorAll(".sort-shift-up, .sort-shift-down, .habit-sort-shift-up, .habit-sort-shift-down").forEach(row => {
+    row.classList.remove("sort-shift-up", "sort-shift-down", "habit-sort-shift-up", "habit-sort-shift-down");
   });
 }
 
 function clearGoodDragStyles() {
-  document.querySelectorAll(".habit-left, .check-row").forEach(row => {
-    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down");
+  document.querySelectorAll(".habit-left, .check-row, .category-left, .category-spacer").forEach(row => {
+    row.classList.remove("dragging", "drag-press", "sort-shift-up", "sort-shift-down", "habit-sort-shift-up", "habit-sort-shift-down");
     row.style.removeProperty("--drag-y");
   });
 }
@@ -2474,6 +2506,71 @@ function setActiveGoodDragColor(categoryId) {
   }
 }
 
+function getGoodVisualLeftRows() {
+  const leftList = document.getElementById("leftList");
+  if (!leftList) return [];
+  return Array.from(leftList.children).filter(row => row.classList.contains("category-left") || row.classList.contains("habit-left"));
+}
+
+function getGoodVisualPairRows(leftRow) {
+  if (!leftRow) return [];
+  if (leftRow.classList.contains("habit-left")) {
+    const index = Number(leftRow.dataset.index);
+    return getGoodDragRows(index);
+  }
+  if (leftRow.classList.contains("category-left")) {
+    const categoryId = leftRow.dataset.categoryId;
+    return [leftRow, document.querySelector(`.category-spacer[data-category-id="${categoryId}"]`)].filter(Boolean);
+  }
+  return [leftRow].filter(Boolean);
+}
+
+function addGoodVisualShift(leftRow, className) {
+  getGoodVisualPairRows(leftRow).forEach(row => row.classList.add(className));
+}
+
+function getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition) {
+  const targetHabitRows = leftRowsWithoutDragged.filter(row => row.classList.contains("habit-left") && row.dataset.categoryId === categoryId);
+  if (targetHabitRows.length) {
+    if (targetPosition <= 0) return leftRowsWithoutDragged.indexOf(targetHabitRows[0]);
+    if (targetPosition >= targetHabitRows.length) return leftRowsWithoutDragged.indexOf(targetHabitRows[targetHabitRows.length - 1]) + 1;
+    return leftRowsWithoutDragged.indexOf(targetHabitRows[targetPosition]);
+  }
+  const categoryHeader = leftRowsWithoutDragged.find(row => row.classList.contains("category-left") && row.dataset.categoryId === categoryId);
+  if (categoryHeader) return leftRowsWithoutDragged.indexOf(categoryHeader) + 1;
+  return categoryId === "black" ? 0 : leftRowsWithoutDragged.length;
+}
+
+function showGoodCrossCategoryVisualPreview(categoryId, targetPosition) {
+  const leftRows = getGoodVisualLeftRows();
+  const draggedRow = document.querySelector(`[data-index="${dragOriginalIndex}"]`);
+  if (!draggedRow) return false;
+  const originalVisualIndex = leftRows.indexOf(draggedRow);
+  if (originalVisualIndex === -1) return false;
+
+  const leftRowsWithoutDragged = leftRows.filter(row => row !== draggedRow);
+  const originalIndexByRow = new Map(leftRows.map((row, index) => [row, index]));
+  const targetInsertIndex = getVisualInsertIndexForGoodCategory(leftRowsWithoutDragged, categoryId, targetPosition);
+
+  if (targetInsertIndex > originalVisualIndex) {
+    leftRowsWithoutDragged.forEach((row, indexWithoutDragged) => {
+      const originalIndex = originalIndexByRow.get(row);
+      if (originalIndex > originalVisualIndex && indexWithoutDragged < targetInsertIndex) {
+        addGoodVisualShift(row, "habit-sort-shift-up");
+      }
+    });
+  } else if (targetInsertIndex < originalVisualIndex) {
+    leftRowsWithoutDragged.forEach((row, indexWithoutDragged) => {
+      const originalIndex = originalIndexByRow.get(row);
+      if (originalIndex < originalVisualIndex && indexWithoutDragged >= targetInsertIndex) {
+        addGoodVisualShift(row, "habit-sort-shift-down");
+      }
+    });
+  }
+
+  return true;
+}
+
 function showGoodSortPreview(categoryId, targetPosition) {
   clearSortPreview();
 
@@ -2501,13 +2598,14 @@ function showGoodSortPreview(categoryId, targetPosition) {
     return;
   }
 
+  if (showGoodCrossCategoryVisualPreview(categoryId, targetPosition)) return;
+
   const targetIndexes = getGoodIndexesByCategory(categoryId, dragOriginalIndex);
   for (let position = targetPosition; position < targetIndexes.length; position++) {
     const index = targetIndexes[position];
     getGoodDragRows(index).forEach(row => row.classList.add("sort-shift-down"));
   }
 }
-
 function getGlobalInsertIndexForGoodHabit(categoryId, targetPosition) {
   const targetIndexes = getGoodIndexesByCategory(categoryId);
 
