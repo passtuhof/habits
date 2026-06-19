@@ -921,7 +921,7 @@ button.disabled-save {
 }
 
 
-/* Карточки привычек */
+/* Плавная сортировка карточек привычек */
 :root {
   --row-height: 56px;
   --card-gap-y: 8px;
@@ -957,14 +957,41 @@ button.disabled-save {
   margin-bottom: var(--card-gap-y);
 }
 
+.habit-left,
+.bad-habit-row {
+  will-change: transform;
+  transition:
+    transform 0.22s cubic-bezier(.2,.8,.2,1),
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    opacity 0.22s ease;
+}
+
+.habit-left.drag-press,
+.bad-habit-row.drag-press {
+  transform: scale(1.025);
+}
+
 .habit-left.dragging,
-.bad-habit-row.dragging,
+.bad-habit-row.dragging {
+  transform: translateY(var(--drag-y, 0px)) scale(1.055);
+  background: #eeeeee;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.16);
+  opacity: 0.96;
+  z-index: 30;
+  position: relative;
+  transition:
+    transform 0.08s linear,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
 .category-left.dragging {
   transform: scale(1.035);
-  background: #eeeeee;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-  opacity: 0.92;
-  z-index: 10;
+  background: rgba(0,0,0,0.05);
+  border-radius: 10px;
+  opacity: 0.8;
 }
 
 .name-wrap,
@@ -2073,21 +2100,33 @@ function startDrag(event, index) {
   startY = dragStartY;
 
   clearTimeout(dragPressTimer);
+
+  const row = document.querySelector(`[data-index="${index}"]`);
+  if (row) row.classList.add("drag-press");
+
   dragPressTimer = setTimeout(() => {
     dragIndex = pendingDragIndex;
     dragActivated = true;
-    const row = document.querySelector(`[data-index="${dragIndex}"]`);
-    if (row) row.classList.add("dragging");
+
+    const activeRow = document.querySelector(`[data-index="${dragIndex}"]`);
+    if (activeRow) {
+      activeRow.classList.remove("drag-press");
+      activeRow.classList.add("dragging");
+      activeRow.style.setProperty("--drag-y", "0px");
+    }
+
     if (navigator.vibrate) navigator.vibrate(12);
   }, 180);
 }
 
 function moveDrag(event) {
   const currentY = event.touches[0].clientY;
+  const totalDiff = currentY - dragStartY;
 
   if (!dragActivated) {
-    if (Math.abs(currentY - dragStartY) > 10) {
+    if (Math.abs(totalDiff) > 10) {
       clearTimeout(dragPressTimer);
+      document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("drag-press"));
       pendingDragIndex = null;
       dragColor = null;
     }
@@ -2096,6 +2135,9 @@ function moveDrag(event) {
 
   event.preventDefault();
   if (dragIndex === null) return;
+
+  const activeRow = document.querySelector(`[data-index="${dragIndex}"]`);
+  if (activeRow) activeRow.style.setProperty("--drag-y", `${currentY - startY}px`);
 
   const diff = currentY - startY;
 
@@ -2130,7 +2172,10 @@ function moveWithinCategory(direction) {
   render();
 
   const row = document.querySelector(`[data-index="${dragIndex}"]`);
-  if (row) row.classList.add("dragging");
+  if (row) {
+    row.classList.add("dragging");
+    row.style.setProperty("--drag-y", "0px");
+  }
 }
 
 function endDrag() {
@@ -2144,7 +2189,11 @@ function endDrag() {
   pendingDragIndex = null;
   dragColor = null;
   dragActivated = false;
-  document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("dragging"));
+
+  document.querySelectorAll(".habit-left").forEach(row => {
+    row.classList.remove("dragging", "drag-press");
+    row.style.removeProperty("--drag-y");
+  });
 }
 
 function startBadDrag(event, badPosition) {
@@ -2155,21 +2204,33 @@ function startBadDrag(event, badPosition) {
   startY = dragStartY;
 
   clearTimeout(dragPressTimer);
+
+  const row = document.querySelector(`[data-bad-index="${badPosition}"]`);
+  if (row) row.classList.add("drag-press");
+
   dragPressTimer = setTimeout(() => {
     dragBadIndex = pendingBadDragIndex;
     dragActivated = true;
-    const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-    if (row) row.classList.add("dragging");
+
+    const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+    if (activeRow) {
+      activeRow.classList.remove("drag-press");
+      activeRow.classList.add("dragging");
+      activeRow.style.setProperty("--drag-y", "0px");
+    }
+
     if (navigator.vibrate) navigator.vibrate(12);
   }, 180);
 }
 
 function moveBadDrag(event) {
   const currentY = event.touches[0].clientY;
+  const totalDiff = currentY - dragStartY;
 
   if (!dragActivated) {
-    if (Math.abs(currentY - dragStartY) > 10) {
+    if (Math.abs(totalDiff) > 10) {
       clearTimeout(dragPressTimer);
+      document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("drag-press"));
       pendingBadDragIndex = null;
     }
     return;
@@ -2177,6 +2238,9 @@ function moveBadDrag(event) {
 
   event.preventDefault();
   if (dragBadIndex === null) return;
+
+  const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+  if (activeRow) activeRow.style.setProperty("--drag-y", `${currentY - startY}px`);
 
   const diff = currentY - startY;
 
@@ -2211,7 +2275,10 @@ function moveBadHabit(direction) {
   render();
 
   const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-  if (row) row.classList.add("dragging");
+  if (row) {
+    row.classList.add("dragging");
+    row.style.setProperty("--drag-y", "0px");
+  }
 }
 
 function endBadDrag() {
@@ -2224,7 +2291,11 @@ function endBadDrag() {
   dragBadIndex = null;
   pendingBadDragIndex = null;
   dragActivated = false;
-  document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("dragging"));
+
+  document.querySelectorAll(".bad-habit-row").forEach(row => {
+    row.classList.remove("dragging", "drag-press");
+    row.style.removeProperty("--drag-y");
+  });
 }
 
 function toggleHabit(habitIndex, dateKey) {
