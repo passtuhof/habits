@@ -955,6 +955,38 @@ button.disabled-save {
     box-shadow 0.18s ease;
 }
 
+
+/* Перетаскивание всей строки привычки вместе с чекбоксами */
+.check-row {
+  will-change: transform;
+  transition:
+    transform 0.22s cubic-bezier(.2,.8,.2,1),
+    background 0.22s ease,
+    opacity 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.check-row.drag-press {
+  transform: scale(1.018);
+  background: rgba(0,0,0,0.025);
+  border-radius: 10px;
+}
+
+.check-row.dragging {
+  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
+  background: rgba(0,0,0,0.04);
+  border-radius: 10px;
+  opacity: 0.95;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+  position: relative;
+  z-index: 30;
+  transition:
+    transform 0.06s linear,
+    background 0.18s ease,
+    opacity 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
 </style>
 </head>
 <body>
@@ -1943,7 +1975,7 @@ function render() {
         </div>
       `;
 
-      let row = `<div class="check-row" style="--habit-color:${color}">`;
+      let row = `<div class="check-row" data-check-index="${habitIndex}" style="--habit-color:${color}">`;
 
       dates.forEach(date => {
         const done = habit.done && habit.done[date.key];
@@ -2034,6 +2066,33 @@ function endCategoryDrag() {
   document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
 }
 
+
+function getGoodDragRows(index) {
+  return [
+    document.querySelector(`[data-index="${index}"]`),
+    document.querySelector(`[data-check-index="${index}"]`)
+  ].filter(Boolean);
+}
+
+function addGoodDragClass(index, className) {
+  getGoodDragRows(index).forEach(row => row.classList.add(className));
+}
+
+function removeGoodDragClass(index, className) {
+  getGoodDragRows(index).forEach(row => row.classList.remove(className));
+}
+
+function setGoodDragY(index, value) {
+  getGoodDragRows(index).forEach(row => row.style.setProperty("--drag-y", value));
+}
+
+function clearGoodDragStyles() {
+  document.querySelectorAll(".habit-left, .check-row").forEach(row => {
+    row.classList.remove("dragging", "drag-press");
+    row.style.removeProperty("--drag-y");
+  });
+}
+
 function startDrag(event, index) {
   if (!isGoodHabit(habits[index])) return;
 
@@ -2046,19 +2105,15 @@ function startDrag(event, index) {
 
   clearTimeout(dragPressTimer);
 
-  const row = document.querySelector(`[data-index="${index}"]`);
-  if (row) row.classList.add("drag-press");
+  addGoodDragClass(index, "drag-press");
 
   dragPressTimer = setTimeout(() => {
     dragIndex = pendingDragIndex;
     dragActivated = true;
 
-    const activeRow = document.querySelector(`[data-index="${dragIndex}"]`);
-    if (activeRow) {
-      activeRow.classList.remove("drag-press");
-      activeRow.classList.add("dragging");
-      activeRow.style.setProperty("--drag-y", "0px");
-    }
+    removeGoodDragClass(dragIndex, "drag-press");
+    addGoodDragClass(dragIndex, "dragging");
+    setGoodDragY(dragIndex, "0px");
 
     if (navigator.vibrate) navigator.vibrate(12);
   }, 180);
@@ -2071,7 +2126,7 @@ function moveDrag(event) {
   if (!dragActivated) {
     if (Math.abs(totalDiff) > 10) {
       clearTimeout(dragPressTimer);
-      document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("drag-press"));
+      clearGoodDragStyles();
       pendingDragIndex = null;
       dragColor = null;
     }
@@ -2081,8 +2136,7 @@ function moveDrag(event) {
   event.preventDefault();
   if (dragIndex === null) return;
 
-  const activeRow = document.querySelector(`[data-index="${dragIndex}"]`);
-  if (activeRow) activeRow.style.setProperty("--drag-y", `${currentY - startY}px`);
+  setGoodDragY(dragIndex, `${currentY - startY}px`);
 
   const diff = currentY - startY;
 
@@ -2116,11 +2170,8 @@ function moveWithinCategory(direction) {
   save();
   render();
 
-  const row = document.querySelector(`[data-index="${dragIndex}"]`);
-  if (row) {
-    row.classList.add("dragging");
-    row.style.setProperty("--drag-y", "0px");
-  }
+  addGoodDragClass(dragIndex, "dragging");
+  setGoodDragY(dragIndex, "0px");
 }
 
 function endDrag() {
@@ -2135,10 +2186,7 @@ function endDrag() {
   dragColor = null;
   dragActivated = false;
 
-  document.querySelectorAll(".habit-left").forEach(row => {
-    row.classList.remove("dragging", "drag-press");
-    row.style.removeProperty("--drag-y");
-  });
+  clearGoodDragStyles();
 }
 
 function startBadDrag(event, badPosition) {
