@@ -1129,6 +1129,35 @@ button.disabled-save {
   transition: transform 0.18s cubic-bezier(.2,.8,.2,1);
 }
 
+/* Активная зажатая привычка всегда поверх всех объектов при сортировке */
+.habit-left.dragging,
+.check-row.dragging {
+  position: relative !important;
+  z-index: 9999 !important;
+  isolation: isolate;
+}
+
+.habit-left.dragging *,
+.check-row.dragging * {
+  position: relative;
+  z-index: 10000;
+}
+
+/* Заголовки категорий при обычном смещении остаются ниже зажатой привычки */
+.category-left,
+.category-left.habit-sort-shift-up,
+.category-left.habit-sort-shift-down,
+.category-spacer,
+.category-spacer.habit-sort-shift-up,
+.category-spacer.habit-sort-shift-down {
+  z-index: 10;
+}
+
+/* При сортировке самих категорий заголовок категории всё равно выше обычных строк, но ниже активной привычки */
+.category-left.dragging {
+  z-index: 900 !important;
+}
+
 </style>
 </head>
 <body>
