@@ -85,18 +85,14 @@ button {
 
 .category-left {
   height: 34px;
-  width: calc(var(--left-width) + 8px + var(--seven-days-width));
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
+  justify-content: space-between;
+  gap: 4px;
   border-bottom: 1px solid #eee;
-  background: #fff;
   font-size: 15px;
   font-weight: 400;
   touch-action: none;
-  text-align: center;
-  z-index: 2;
 }
 
 .category-left.dragging,
@@ -109,24 +105,14 @@ button {
 }
 
 .category-title {
-  width: 100%;
-  padding: 0 34px;
-  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .category-arrow {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
   font-size: 12px;
-  line-height: 1;
   flex-shrink: 0;
-  padding: 8px;
-  z-index: 3;
 }
 
 .category-spacer {
@@ -895,115 +881,9 @@ button.disabled-save {
 }
 
 
-@media (orientation: landscape) {
-  .category-left {
-    width: calc(100vw - 28px);
-    max-width: calc(100vw - 28px);
-  }
-}
-
-
-.title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reset-dot-btn {
-  width: 14px;
-  height: 14px;
-  min-width: 14px;
-  min-height: 14px;
-  padding: 0;
-  border-radius: 50%;
-  background: #111;
-  display: inline-block;
-}
-
-
-/* Плавная сортировка привычек строками */
-.habit-left,
-.bad-habit-row {
-  will-change: transform;
-  transition:
-    transform 0.22s cubic-bezier(.2,.8,.2,1),
-    background 0.22s ease,
-    opacity 0.22s ease,
-    box-shadow 0.22s ease;
-}
-
-.habit-left.drag-press,
-.bad-habit-row.drag-press {
-  transform: scale(1.018);
-  background: rgba(0,0,0,0.035);
-  border-radius: 10px;
-}
-
-.habit-left.dragging,
-.bad-habit-row.dragging {
-  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
-  background: rgba(0,0,0,0.06);
-  border-radius: 10px;
-  opacity: 0.95;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.14);
-  position: relative;
-  z-index: 30;
-  transition:
-    transform 0.06s linear,
-    background 0.18s ease,
-    opacity 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-
-/* Перетаскивание всей строки привычки вместе с чекбоксами */
-.check-row {
-  will-change: transform;
-  transition:
-    transform 0.22s cubic-bezier(.2,.8,.2,1),
-    background 0.22s ease,
-    opacity 0.22s ease,
-    box-shadow 0.22s ease;
-}
-
-.check-row.drag-press {
-  transform: scale(1.018);
-  background: rgba(0,0,0,0.025);
-  border-radius: 10px;
-}
-
-.check-row.dragging {
-  transform: translateY(var(--drag-y, 0px)) scale(1.04) !important;
-  background: rgba(0,0,0,0.04);
-  border-radius: 10px;
-  opacity: 0.95;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
-  position: relative;
-  z-index: 30;
-  transition:
-    transform 0.06s linear,
-    background 0.18s ease,
-    opacity 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-
-/* Запрет выделения и копирования всего интерфейса */
-* {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* Разрешаем выделение только в нужных полях */
-#habitTitle,
-#habitDescription,
-#newCategoryName,
-#categoryTitleInput {
-  -webkit-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
-}
+/* Визуальный сдвиг соседних строк во время сортировки */
+.sort-shift-up{transform:translateY(calc(var(--row-height) * -1));}
+.sort-shift-down{transform:translateY(var(--row-height));}
 
 </style>
 </head>
@@ -1011,10 +891,7 @@ button.disabled-save {
 
 <div class="app">
   <div class="top">
-    <div class="title-row">
-      <h1>Привычки</h1>
-      <button class="reset-dot-btn" onclick="resetAllData()" title="Очистить Local Storage"></button>
-    </div>
+    <h1>Привычки</h1>
     <div class="top-actions">
       <button class="add-habit-btn" onclick="openModal()" title="Добавить привычку">
         <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
@@ -1235,16 +1112,6 @@ let dragBadIndex = null;
 let dragCategoryIndex = null;
 let startY = 0;
 
-let dragPressTimer = null;
-let pendingDragIndex = null;
-let pendingBadDragIndex = null;
-let dragStartY = 0;
-let dragActivated = false;
-let suppressClickUntil = 0;
-let isSortingNow = false;
-let needsSaveAfterDrag = false;
-let renderFrameId = null;
-
 let calendarViewDate = new Date();
 calendarViewDate.setHours(0, 0, 0, 0);
 
@@ -1256,13 +1123,6 @@ const colorMap = {
   yellow: "#ffcc00"
 };
 
-
-
-function resetAllData() {
-  if (!confirm("Очистить все данные и вернуть сервис к первому запуску?")) return;
-  localStorage.clear();
-  location.reload();
-}
 
 function showModal(id) {
   const modal = document.getElementById(id);
@@ -1908,32 +1768,6 @@ function getCategoryRenderColor(category) {
   return colorMap[category.color] || colorMap.black;
 }
 
-
-function scrollCalendarToToday(force = false) {
-  const scroll = document.getElementById("rightScroll");
-  if (!scroll) return;
-
-  const { todayIndex } = getDates();
-  const styles = getComputedStyle(document.documentElement);
-  const dayWidth = parseInt(styles.getPropertyValue("--day-width")) || 33;
-  const gap = parseInt(styles.getPropertyValue("--gap")) || 3;
-
-  if (force || !window.initialScrollDone) {
-    scroll.scrollLeft = todayIndex * (dayWidth + gap);
-    window.initialScrollDone = true;
-  }
-}
-
-
-function scheduleRenderAfterDrag() {
-  if (renderFrameId !== null) return;
-
-  renderFrameId = requestAnimationFrame(() => {
-    renderFrameId = null;
-    render();
-  });
-}
-
 function render() {
   const { result: dates, todayIndex } = getDates();
 
@@ -2006,7 +1840,7 @@ function render() {
         </div>
       `;
 
-      let row = `<div class="check-row" data-check-index="${habitIndex}" style="--habit-color:${color}">`;
+      let row = `<div class="check-row" style="--habit-color:${color}">`;
 
       dates.forEach(date => {
         const done = habit.done && habit.done[date.key];
@@ -2039,11 +1873,14 @@ function render() {
     `;
   });
 
-  if (!isSortingNow) {
-    setTimeout(() => {
-      scrollCalendarToToday(false);
-    }, 0);
-  }
+  setTimeout(() => {
+    const scroll = document.getElementById("rightScroll");
+    if (!window.initialScrollDone) {
+      const dayWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--day-width"));
+      scroll.scrollLeft = todayIndex * (dayWidth + 3);
+      window.initialScrollDone = true;
+    }
+  }, 0);
 }
 
 function toggleCategory(event, colorKey) {
@@ -2077,8 +1914,8 @@ function moveCategoryDrag(event) {
     categoryOrder = ["black", ...sortable];
     dragCategoryIndex++;
     startY = currentY;
-    needsSaveAfterDrag = true;
-    scheduleRenderAfterDrag();
+    save();
+    render();
   }
 
   if (diff < -34 && dragCategoryIndex > 0) {
@@ -2089,109 +1926,38 @@ function moveCategoryDrag(event) {
     categoryOrder = ["black", ...sortable];
     dragCategoryIndex--;
     startY = currentY;
-    needsSaveAfterDrag = true;
-    scheduleRenderAfterDrag();
-  }
-}
-
-function endCategoryDrag() {
-  if (needsSaveAfterDrag) {
     save();
-  }
-
-  dragCategoryIndex = null;
-  needsSaveAfterDrag = false;
-  document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
-
-  if (renderFrameId !== null) {
-    cancelAnimationFrame(renderFrameId);
-    renderFrameId = null;
     render();
   }
 }
 
-
-function getGoodDragRows(index) {
-  return [
-    document.querySelector(`[data-index="${index}"]`),
-    document.querySelector(`[data-check-index="${index}"]`)
-  ].filter(Boolean);
-}
-
-function addGoodDragClass(index, className) {
-  getGoodDragRows(index).forEach(row => row.classList.add(className));
-}
-
-function removeGoodDragClass(index, className) {
-  getGoodDragRows(index).forEach(row => row.classList.remove(className));
-}
-
-function setGoodDragY(index, value) {
-  getGoodDragRows(index).forEach(row => row.style.setProperty("--drag-y", value));
-}
-
-function clearGoodDragStyles() {
-  document.querySelectorAll(".habit-left, .check-row").forEach(row => {
-    row.classList.remove("dragging", "drag-press");
-    row.style.removeProperty("--drag-y");
-  });
+function endCategoryDrag() {
+  dragCategoryIndex = null;
+  document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
 }
 
 function startDrag(event, index) {
   if (!isGoodHabit(habits[index])) return;
-
-  pendingDragIndex = index;
-  dragIndex = null;
+  dragIndex = index;
   dragColor = habits[index].color;
-  dragActivated = false;
-  dragStartY = event.touches[0].clientY;
-  startY = dragStartY;
-
-  clearTimeout(dragPressTimer);
-
-  addGoodDragClass(index, "drag-press");
-
-  dragPressTimer = setTimeout(() => {
-    dragIndex = pendingDragIndex;
-    dragActivated = true;
-    isSortingNow = true;
-    needsSaveAfterDrag = false;
-
-    removeGoodDragClass(dragIndex, "drag-press");
-    addGoodDragClass(dragIndex, "dragging");
-    setGoodDragY(dragIndex, "0px");
-
-    if (navigator.vibrate) navigator.vibrate(12);
-  }, 180);
+  startY = event.touches[0].clientY;
+  const row = document.querySelector(`[data-index="${index}"]`);
+  if (row) row.classList.add("dragging");
 }
 
 function moveDrag(event) {
-  const currentY = event.touches[0].clientY;
-  const totalDiff = currentY - dragStartY;
-
-  if (!dragActivated) {
-    if (Math.abs(totalDiff) > 10) {
-      clearTimeout(dragPressTimer);
-      clearGoodDragStyles();
-      pendingDragIndex = null;
-      dragColor = null;
-    }
-    return;
-  }
-
   event.preventDefault();
   if (dragIndex === null) return;
 
-  setGoodDragY(dragIndex, `${currentY - startY}px`);
-
+  const currentY = event.touches[0].clientY;
   const diff = currentY - startY;
 
-  if (diff > 44) {
+  if (diff > 42) {
     moveWithinCategory(1);
     startY = currentY;
   }
 
-  if (diff < -44) {
+  if (diff < -42) {
     moveWithinCategory(-1);
     startY = currentY;
   }
@@ -2213,98 +1979,39 @@ function moveWithinCategory(direction) {
   habits[targetIndex] = temp;
   dragIndex = targetIndex;
 
-  needsSaveAfterDrag = true;
-  scheduleRenderAfterDrag();
+  save();
+  render();
 
-  requestAnimationFrame(() => {
-    addGoodDragClass(dragIndex, "dragging");
-    setGoodDragY(dragIndex, "0px");
-  });
+  const row = document.querySelector(`[data-index="${dragIndex}"]`);
+  if (row) row.classList.add("dragging");
 }
 
 function endDrag() {
-  clearTimeout(dragPressTimer);
-
-  if (dragActivated) {
-    suppressClickUntil = Date.now() + 350;
-  }
-
-  if (needsSaveAfterDrag) {
-    save();
-  }
-
   dragIndex = null;
-  pendingDragIndex = null;
   dragColor = null;
-  dragActivated = false;
-  isSortingNow = false;
-  needsSaveAfterDrag = false;
-
-  clearGoodDragStyles();
-
-  if (renderFrameId !== null) {
-    cancelAnimationFrame(renderFrameId);
-    renderFrameId = null;
-    render();
-  }
+  document.querySelectorAll(".habit-left").forEach(row => row.classList.remove("dragging"));
 }
 
 function startBadDrag(event, badPosition) {
-  pendingBadDragIndex = badPosition;
-  dragBadIndex = null;
-  dragActivated = false;
-  dragStartY = event.touches[0].clientY;
-  startY = dragStartY;
-
-  clearTimeout(dragPressTimer);
-
+  dragBadIndex = badPosition;
+  startY = event.touches[0].clientY;
   const row = document.querySelector(`[data-bad-index="${badPosition}"]`);
-  if (row) row.classList.add("drag-press");
-
-  dragPressTimer = setTimeout(() => {
-    dragBadIndex = pendingBadDragIndex;
-    dragActivated = true;
-    isSortingNow = true;
-    needsSaveAfterDrag = false;
-
-    const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-    if (activeRow) {
-      activeRow.classList.remove("drag-press");
-      activeRow.classList.add("dragging");
-      activeRow.style.setProperty("--drag-y", "0px");
-    }
-
-    if (navigator.vibrate) navigator.vibrate(12);
-  }, 180);
+  if (row) row.classList.add("dragging");
 }
 
 function moveBadDrag(event) {
-  const currentY = event.touches[0].clientY;
-  const totalDiff = currentY - dragStartY;
-
-  if (!dragActivated) {
-    if (Math.abs(totalDiff) > 10) {
-      clearTimeout(dragPressTimer);
-      document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("drag-press"));
-      pendingBadDragIndex = null;
-    }
-    return;
-  }
-
   event.preventDefault();
   if (dragBadIndex === null) return;
 
-  const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-  if (activeRow) activeRow.style.setProperty("--drag-y", `${currentY - startY}px`);
-
+  const currentY = event.touches[0].clientY;
   const diff = currentY - startY;
 
-  if (diff > 44) {
+  if (diff > 42) {
     moveBadHabit(1);
     startY = currentY;
   }
 
-  if (diff < -44) {
+  if (diff < -42) {
     moveBadHabit(-1);
     startY = currentY;
   }
@@ -2326,49 +2033,19 @@ function moveBadHabit(direction) {
   habits[targetHabitIndex] = temp;
   dragBadIndex = targetBadPosition;
 
-  needsSaveAfterDrag = true;
-  scheduleRenderAfterDrag();
+  save();
+  render();
 
-  requestAnimationFrame(() => {
-    const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-    if (row) {
-      row.classList.add("dragging");
-      row.style.setProperty("--drag-y", "0px");
-    }
-  });
+  const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+  if (row) row.classList.add("dragging");
 }
 
 function endBadDrag() {
-  clearTimeout(dragPressTimer);
-
-  if (dragActivated) {
-    suppressClickUntil = Date.now() + 350;
-  }
-
-  if (needsSaveAfterDrag) {
-    save();
-  }
-
   dragBadIndex = null;
-  pendingBadDragIndex = null;
-  dragActivated = false;
-  isSortingNow = false;
-  needsSaveAfterDrag = false;
-
-  document.querySelectorAll(".bad-habit-row").forEach(row => {
-    row.classList.remove("dragging", "drag-press");
-    row.style.removeProperty("--drag-y");
-  });
-
-  if (renderFrameId !== null) {
-    cancelAnimationFrame(renderFrameId);
-    renderFrameId = null;
-    render();
-  }
+  document.querySelectorAll(".bad-habit-row").forEach(row => row.classList.remove("dragging"));
 }
 
 function toggleHabit(habitIndex, dateKey) {
-  if (Date.now() < suppressClickUntil || dragActivated) return;
   if (!isGoodHabit(habits[habitIndex])) return;
 
   if (!habits[habitIndex].done) habits[habitIndex].done = {};
@@ -2439,8 +2116,7 @@ function openModal() {
 
 function editHabit(index) {
   initHabitTypeToggleDrag();
-  if (Date.now() < suppressClickUntil) return;
-  if (dragIndex !== null || dragBadIndex !== null || dragActivated) return;
+  if (dragIndex !== null || dragBadIndex !== null) return;
 
   editingIndex = index;
   currentHabitType = habits[index].type === "bad" ? "bad" : "good";
@@ -2516,22 +2192,9 @@ function saveHabit() {
     }
   }
 
-  const shouldScrollToToday = editingIndex === null && currentHabitType === "good";
-
   save();
   closeModal();
-
-  if (shouldScrollToToday) {
-    window.initialScrollDone = false;
-  }
-
   render();
-
-  if (shouldScrollToToday) {
-    setTimeout(() => {
-      scrollCalendarToToday(true);
-    }, 0);
-  }
 }
 
 function deleteCurrentHabit() {
@@ -2778,15 +2441,6 @@ function changeViolations(delta) {
 
 let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [];
 
-if (customCategories.length === 0) {
-  customCategories = [
-    { id: "default_morning", name: "Утро", color: "yellow" },
-    { id: "default_day", name: "День", color: "green" },
-    { id: "default_evening", name: "Вечер", color: "blue" }
-  ];
-  localStorage.setItem("customCategories", JSON.stringify(customCategories));
-}
-
 function refreshCategorySelect(){
  const s=document.getElementById('habitColor');
  if(!s) return;
@@ -2881,37 +2535,6 @@ render();
       event.preventDefault();
     }
   }, { passive: false });
-})();
-</script>
-
-
-<script>
-(function () {
-  const allowedSelectors = [
-    "#habitTitle",
-    "#habitDescription",
-    "#newCategoryName",
-    "#categoryTitleInput"
-  ];
-
-  function isAllowedEditable(target) {
-    return allowedSelectors.some(selector => target && target.closest && target.closest(selector));
-  }
-
-  ["copy", "cut", "selectstart", "contextmenu", "dragstart"].forEach(function(eventName) {
-    document.addEventListener(eventName, function(event) {
-      if (isAllowedEditable(event.target)) return;
-      event.preventDefault();
-    }, { passive: false });
-  });
-
-  document.addEventListener("touchstart", function(event) {
-    if (isAllowedEditable(event.target)) return;
-    if (window.getSelection) {
-      const selection = window.getSelection();
-      if (selection) selection.removeAllRanges();
-    }
-  }, { passive: true });
 })();
 </script>
 
