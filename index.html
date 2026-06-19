@@ -1241,6 +1241,9 @@ let pendingBadDragIndex = null;
 let dragStartY = 0;
 let dragActivated = false;
 let suppressClickUntil = 0;
+let isSortingNow = false;
+let needsSaveAfterDrag = false;
+let renderFrameId = null;
 
 let calendarViewDate = new Date();
 calendarViewDate.setHours(0, 0, 0, 0);
@@ -1921,6 +1924,16 @@ function scrollCalendarToToday(force = false) {
   }
 }
 
+
+function scheduleRenderAfterDrag() {
+  if (renderFrameId !== null) return;
+
+  renderFrameId = requestAnimationFrame(() => {
+    renderFrameId = null;
+    render();
+  });
+}
+
 function render() {
   const { result: dates, todayIndex } = getDates();
 
@@ -2026,9 +2039,11 @@ function render() {
     `;
   });
 
-  setTimeout(() => {
-    scrollCalendarToToday(false);
-  }, 0);
+  if (!isSortingNow) {
+    setTimeout(() => {
+      scrollCalendarToToday(false);
+    }, 0);
+  }
 }
 
 function toggleCategory(event, colorKey) {
@@ -2062,8 +2077,8 @@ function moveCategoryDrag(event) {
     categoryOrder = ["black", ...sortable];
     dragCategoryIndex++;
     startY = currentY;
-    save();
-    render();
+    needsSaveAfterDrag = true;
+    scheduleRenderAfterDrag();
   }
 
   if (diff < -34 && dragCategoryIndex > 0) {
@@ -2074,14 +2089,25 @@ function moveCategoryDrag(event) {
     categoryOrder = ["black", ...sortable];
     dragCategoryIndex--;
     startY = currentY;
-    save();
-    render();
+    needsSaveAfterDrag = true;
+    scheduleRenderAfterDrag();
   }
 }
 
 function endCategoryDrag() {
+  if (needsSaveAfterDrag) {
+    save();
+  }
+
   dragCategoryIndex = null;
+  needsSaveAfterDrag = false;
   document.querySelectorAll(".category-left").forEach(row => row.classList.remove("dragging"));
+
+  if (renderFrameId !== null) {
+    cancelAnimationFrame(renderFrameId);
+    renderFrameId = null;
+    render();
+  }
 }
 
 
@@ -2128,6 +2154,8 @@ function startDrag(event, index) {
   dragPressTimer = setTimeout(() => {
     dragIndex = pendingDragIndex;
     dragActivated = true;
+    isSortingNow = true;
+    needsSaveAfterDrag = false;
 
     removeGoodDragClass(dragIndex, "drag-press");
     addGoodDragClass(dragIndex, "dragging");
@@ -2185,11 +2213,13 @@ function moveWithinCategory(direction) {
   habits[targetIndex] = temp;
   dragIndex = targetIndex;
 
-  save();
-  render();
+  needsSaveAfterDrag = true;
+  scheduleRenderAfterDrag();
 
-  addGoodDragClass(dragIndex, "dragging");
-  setGoodDragY(dragIndex, "0px");
+  requestAnimationFrame(() => {
+    addGoodDragClass(dragIndex, "dragging");
+    setGoodDragY(dragIndex, "0px");
+  });
 }
 
 function endDrag() {
@@ -2199,12 +2229,24 @@ function endDrag() {
     suppressClickUntil = Date.now() + 350;
   }
 
+  if (needsSaveAfterDrag) {
+    save();
+  }
+
   dragIndex = null;
   pendingDragIndex = null;
   dragColor = null;
   dragActivated = false;
+  isSortingNow = false;
+  needsSaveAfterDrag = false;
 
   clearGoodDragStyles();
+
+  if (renderFrameId !== null) {
+    cancelAnimationFrame(renderFrameId);
+    renderFrameId = null;
+    render();
+  }
 }
 
 function startBadDrag(event, badPosition) {
@@ -2222,6 +2264,8 @@ function startBadDrag(event, badPosition) {
   dragPressTimer = setTimeout(() => {
     dragBadIndex = pendingBadDragIndex;
     dragActivated = true;
+    isSortingNow = true;
+    needsSaveAfterDrag = false;
 
     const activeRow = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
     if (activeRow) {
@@ -2282,14 +2326,16 @@ function moveBadHabit(direction) {
   habits[targetHabitIndex] = temp;
   dragBadIndex = targetBadPosition;
 
-  save();
-  render();
+  needsSaveAfterDrag = true;
+  scheduleRenderAfterDrag();
 
-  const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
-  if (row) {
-    row.classList.add("dragging");
-    row.style.setProperty("--drag-y", "0px");
-  }
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`[data-bad-index="${dragBadIndex}"]`);
+    if (row) {
+      row.classList.add("dragging");
+      row.style.setProperty("--drag-y", "0px");
+    }
+  });
 }
 
 function endBadDrag() {
@@ -2299,14 +2345,26 @@ function endBadDrag() {
     suppressClickUntil = Date.now() + 350;
   }
 
+  if (needsSaveAfterDrag) {
+    save();
+  }
+
   dragBadIndex = null;
   pendingBadDragIndex = null;
   dragActivated = false;
+  isSortingNow = false;
+  needsSaveAfterDrag = false;
 
   document.querySelectorAll(".bad-habit-row").forEach(row => {
     row.classList.remove("dragging", "drag-press");
     row.style.removeProperty("--drag-y");
   });
+
+  if (renderFrameId !== null) {
+    cancelAnimationFrame(renderFrameId);
+    renderFrameId = null;
+    render();
+  }
 }
 
 function toggleHabit(habitIndex, dateKey) {
