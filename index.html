@@ -3575,6 +3575,7 @@ function setNoCountValue(value) {
 
 function toggleNoCount() {
   updateNoCountUI();
+  updateRefusalInfo();
   updateHabitSaveButton();
 }
 
@@ -3591,6 +3592,10 @@ function updateNoCountUI() {
 
   if (refusalInfo) {
     refusalInfo.style.display = noCount ? "none" : "block";
+  }
+
+  if (!noCount) {
+    updateRefusalInfo();
   }
 }
 
