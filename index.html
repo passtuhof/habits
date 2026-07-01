@@ -1366,11 +1366,13 @@ body.bad-habit-dragging .bad-habit-row.dragging {
       <button id="badTypeBtn" class="type-btn" onclick="setHabitType('bad')">Плохая</button>
     </div>
 
+    <div class="label">Название</div>
     <div class="field-wrap">
       <input id="habitTitle" maxlength="50" placeholder="Название привычки" oninput="updateHabitTitleCounter(); updateHabitSaveButton()">
       <div id="habitTitleCounter" class="char-counter">0/50</div>
     </div>
 
+    <div class="label">Описание</div>
     <div class="description-wrap">
       <textarea id="habitDescription" maxlength="1000" placeholder="Описание привычки" oninput="updateDescriptionCounter(); updateHabitSaveButton();"></textarea>
       <div id="descriptionCounter" class="char-counter">0/1000</div>
@@ -1658,8 +1660,8 @@ function openColorPicker(targetId) {
   list.innerHTML = "";
 
   const colors = targetId === "newCategoryColor"
-    ? ["black", "red", "blue", "green", "yellow"]
-    : ["black", "red", "blue", "green", "yellow"];
+    ? ["black", "red", "green", "blue", "yellow"]
+    : ["black", "red", "green", "blue", "yellow"];
 
   colors.forEach(colorKey => {
     const btn = document.createElement("button");
@@ -3619,7 +3621,7 @@ let customCategories = JSON.parse(localStorage.getItem("customCategories")) || [
 
 if (customCategories.length === 0) {
   customCategories = [
-    { id: "default_morning", name: "Утро", color: "yellow" },
+    { id: "default_morning", name: "Утро", color: "red" },
     { id: "default_day", name: "День", color: "green" },
     { id: "default_evening", name: "Вечер", color: "blue" }
   ];
