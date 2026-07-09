@@ -1344,11 +1344,21 @@ body.bad-habit-dragging .bad-habit-row.dragging {
     <button type="button" class="modal-close-btn" onclick="closeSettingsModal()">×</button>
     <h2>Настройки</h2>
 
+    <div class="settings-block-title">Хорошие привычки</div>
+
+    <div class="settings-row">
+      <div>Категории</div>
+      <div class="toggle-two" id="categoriesToggle">
+        <button type="button" id="categoriesNoBtn" onclick="setCategoriesSetting(false)">Нет</button>
+        <button type="button" id="categoriesYesBtn" onclick="setCategoriesSetting(true)">Да</button>
+      </div>
+    </div>
+
     <div class="settings-block-title">Плохие привычки</div>
 
     <div class="settings-row">
       <div>Нарушения</div>
-      <div class="toggle-two">
+      <div class="toggle-two" id="violationsToggle">
         <button type="button" id="violationsNoBtn" onclick="setViolationsSetting(false)">Нет</button>
         <button type="button" id="violationsYesBtn" onclick="setViolationsSetting(true)">Да</button>
       </div>
@@ -1379,7 +1389,7 @@ body.bad-habit-dragging .bad-habit-row.dragging {
     </div>
 
     <div id="goodFields">
-      <div class="label">Категория</div>
+      <div class="label" id="goodFieldLabel">Категория</div>
       <input id="habitColorDisplay" class="picker-field" readonly onclick="openCategoryPicker()" value="Нет">
       <input id="habitColor" type="hidden" value="black">
     </div>
@@ -1488,8 +1498,10 @@ let editingIndex = null;
 let editingCategory = null;
 let currentHabitType = "good";
 let appSettings = JSON.parse(localStorage.getItem("appSettings")) || {
-  showViolations: false
+  showViolations: false,
+  useCategories: true
 };
+if (appSettings.useCategories === undefined) appSettings.useCategories = true;
 
 let originalHabitSnapshot = "";
 let originalCategorySnapshot = "";
@@ -1552,8 +1564,8 @@ function hideModal(id) {
 const pickerColors = {
   black: { name: "Чёрный", value: "#111111" },
   red: { name: "Красный", value: "#ff3b30" },
-  blue: { name: "Синий", value: "#007aff" },
   green: { name: "Зелёный", value: "#34c759" },
+  blue: { name: "Синий", value: "#007aff" },
   yellow: { name: "Жёлтый", value: "#ffcc00" }
 };
 
@@ -1567,12 +1579,49 @@ function getColorValue(colorKey) {
   return pickerColors[colorKey]?.value || "#111111";
 }
 
+function getResolvedHabitColorKey(value) {
+  if (pickerColors[value]) return value;
+  const cat = customCategories.find(c => c.id === value);
+  return cat?.color || "black";
+}
+
+function getResolvedHabitColorValue(value) {
+  return getColorValue(getResolvedHabitColorKey(value));
+}
+
+function updateGoodHabitFieldMode() {
+  const label = document.getElementById("goodFieldLabel");
+  const display = document.getElementById("habitColorDisplay");
+  const hidden = document.getElementById("habitColor");
+  if (!label || !display || !hidden) return;
+
+  if (appSettings.useCategories === false) {
+    const colorKey = getResolvedHabitColorKey(hidden.value || "black");
+    label.textContent = "Цвет";
+    display.onclick = () => openColorPicker("habitColor");
+    display.value = getColorName(colorKey);
+    display.style.color = getColorValue(colorKey);
+  } else {
+    label.textContent = "Категория";
+    display.onclick = () => openCategoryPicker();
+    setCategoryValue(hidden.value || "black");
+  }
+}
+
 function setCategoryValue(value) {
   const hidden = document.getElementById("habitColor");
   const display = document.getElementById("habitColorDisplay");
   if (!hidden || !display) return;
 
   hidden.value = value;
+
+  if (appSettings.useCategories === false) {
+    const colorKey = getResolvedHabitColorKey(value || "black");
+    display.value = getColorName(colorKey);
+    display.style.color = getColorValue(colorKey);
+    updateHabitSaveButton();
+    return;
+  }
 
   if (value === "black") {
     display.value = "Нет";
@@ -1650,6 +1699,7 @@ function setColorValue(targetId, colorKey) {
 
   if (targetId === "newCategoryColor") updateNewCategorySaveButton();
   if (targetId === "categoryColor") updateCategorySaveButton();
+  if (targetId === "habitColor") updateHabitSaveButton();
 }
 
 function openColorPicker(targetId) {
@@ -1659,9 +1709,7 @@ function openColorPicker(targetId) {
 
   list.innerHTML = "";
 
-  const colors = targetId === "newCategoryColor"
-    ? ["black", "red", "green", "blue", "yellow"]
-    : ["black", "red", "green", "blue", "yellow"];
+  const colors = ["black", "red", "green", "blue", "yellow"];
 
   colors.forEach(colorKey => {
     const btn = document.createElement("button");
@@ -1713,7 +1761,7 @@ function setViolationsDragPreview(isYesPreview) {
 }
 
 function updateViolationsTogglePreview(isYesPreview) {
-  const toggle = document.querySelector("#settingsModal .toggle-two");
+  const toggle = document.getElementById("violationsToggle");
   const noBtn = document.getElementById("violationsNoBtn");
   const yesBtn = document.getElementById("violationsYesBtn");
 
@@ -1727,7 +1775,7 @@ function updateViolationsTogglePreview(isYesPreview) {
 }
 
 function clearViolationsTogglePreview() {
-  const toggle = document.querySelector("#settingsModal .toggle-two");
+  const toggle = document.getElementById("violationsToggle");
   if (!toggle) return;
 
   toggle.classList.remove("drag-preview-no", "drag-preview-yes");
@@ -1740,7 +1788,7 @@ let violationsToggleDrag = {
 };
 
 function initViolationsToggleDrag() {
-  const toggle = document.querySelector("#settingsModal .toggle-two");
+  const toggle = document.getElementById("violationsToggle");
   if (!toggle || toggle.dataset.dragReady === "true") return;
 
   toggle.dataset.dragReady = "true";
@@ -1813,6 +1861,14 @@ function closeSettingsModal() {
   hideModal("settingsModal");
 }
 
+function setCategoriesSetting(value) {
+  appSettings.useCategories = value;
+  save();
+  updateSettingsUI();
+  updateGoodHabitFieldMode();
+  render();
+}
+
 function setViolationsSetting(value) {
   appSettings.showViolations = value;
   save();
@@ -1822,6 +1878,17 @@ function setViolationsSetting(value) {
 }
 
 function updateSettingsUI() {
+  const cNoBtn = document.getElementById("categoriesNoBtn");
+  const cYesBtn = document.getElementById("categoriesYesBtn");
+  const cToggle = document.getElementById("categoriesToggle");
+
+  if (cNoBtn && cYesBtn && cToggle) {
+    cNoBtn.classList.toggle("active", appSettings.useCategories === false);
+    cYesBtn.classList.toggle("active", appSettings.useCategories !== false);
+    cToggle.classList.toggle("yes", appSettings.useCategories !== false);
+    cToggle.style.setProperty("--toggle-shift", appSettings.useCategories !== false ? "100%" : "0%");
+  }
+
   const noBtn = document.getElementById("violationsNoBtn");
   const yesBtn = document.getElementById("violationsYesBtn");
 
@@ -2240,6 +2307,36 @@ function render() {
     datesRow.innerHTML += `<div class="day ${date.isToday ? "today" : ""}">${date.label}</div>`;
   });
 
+  if (appSettings.useCategories === false) {
+    habits.forEach((habit, habitIndex) => {
+      if (!isGoodHabit(habit)) return;
+
+      const habitColorKey = getResolvedHabitColorKey(habit.color || "black");
+      const color = getColorValue(habitColorKey);
+
+      leftList.innerHTML += `
+        <div class="habit-left" data-index="${habitIndex}" data-category-id="${habitColorKey}">
+          <div class="name-wrap"
+            onclick="editHabit(${habitIndex})"
+            ontouchstart="startDrag(event, ${habitIndex})"
+            ontouchmove="moveDrag(event)"
+            ontouchend="endDrag(event)">
+            <div class="habit-name" style="color:${color}">${habit.title}</div>
+          </div>
+        </div>
+      `;
+
+      let row = `<div class="check-row" data-check-index="${habitIndex}" data-category-id="${habitColorKey}" style="--habit-color:${color}">`;
+
+      dates.forEach(date => {
+        const done = habit.done && habit.done[date.key];
+        row += `<div class="cell ${done ? "done" : ""}" onclick="toggleHabit(${habitIndex}, '${date.key}')"></div>`;
+      });
+
+      row += `</div>`;
+      checksList.innerHTML += row;
+    });
+  } else {
   getCategoryListForRender().forEach((category, categoryIndex) => {
     const categoryKey = category.id;
     const categoryHabits = habits.filter(habit => isGoodHabit(habit) && (habit.color || "black") === categoryKey);
@@ -2293,6 +2390,8 @@ function render() {
       checksList.innerHTML += row;
     });
   });
+
+  }
 
   badSectionTitle.style.display = badHabits.length ? "block" : "none";
 
@@ -2558,11 +2657,13 @@ function getSameColorIndexesForDrag() {
 }
 
 function getGoodCategoryById(categoryId) {
+  if (pickerColors[categoryId]) return { id: categoryId, name: "", color: categoryId };
   if (categoryId === "black") return { id: "black", name: "", color: "black" };
   return customCategories.find(category => category.id === categoryId) || null;
 }
 
 function getGoodCategoryColorValue(categoryId) {
+  if (appSettings.useCategories === false) return getResolvedHabitColorValue(categoryId);
   const category = getGoodCategoryById(categoryId);
   if (!category) return colorMap.black;
   return colorMap[category.color || category.id] || colorMap.black;
@@ -3223,6 +3324,7 @@ function openModal() {
 
   updateHabitTypeUI(false);
   updateRefusalInfo();
+  updateGoodHabitFieldMode();
 
   showModal("modal");
 }
@@ -3248,6 +3350,7 @@ function editHabit(index) {
   document.getElementById("deleteButton").style.display = "block";
 
   updateHabitTypeUI(true);
+  updateGoodHabitFieldMode();
 
   originalHabitSnapshot = getHabitFormSnapshot();
   updateHabitSaveButton();
@@ -3263,7 +3366,10 @@ function editHabit(index) {
 function saveHabit() {
   const title = document.getElementById("habitTitle").value.trim();
   const description = document.getElementById("habitDescription").value.trim();
-  const color = document.getElementById("habitColor").value;
+  let color = document.getElementById("habitColor").value;
+  if (currentHabitType === "good" && appSettings.useCategories === false) {
+    color = getResolvedHabitColorKey(color || "black");
+  }
   const quitDate = document.getElementById("quitDate").value || todayKey();
   const noCount = document.getElementById("noCountCheckbox")?.checked || false;
   const violations = Number(document.getElementById("violationCount").textContent) || 0;
@@ -3632,6 +3738,7 @@ function refreshCategorySelect(){
  const s=document.getElementById('habitColor');
  if(!s) return;
  setCategoryValue(s.value || "black");
+ updateGoodHabitFieldMode();
 }
 
 function handleCategorySelect(sel){
@@ -3663,6 +3770,7 @@ refreshCategorySelect();
 setColorValue("newCategoryColor", document.getElementById("newCategoryColor").value || "black");
 setColorValue("categoryColor", document.getElementById("categoryColor").value || "black");
 updateSettingsUI();
+updateGoodHabitFieldMode();
 initViolationsToggleDrag();
 initHabitTypeToggleDrag();
 updateHabitTitleCounter();
