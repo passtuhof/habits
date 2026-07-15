@@ -212,6 +212,7 @@ button {
 }
 
 .cell.done::after { content: "✓"; }
+.cell.failed::after { content: "×"; }
 
 .bad-section {
   margin-top: 16px;
@@ -679,13 +680,15 @@ border-radius:50%;
 /* Вложенные модалки поверх основного окна редактирования */
 #categoryPickerModal,
 #colorPickerModal,
-#deleteHabitConfirmModal {
+#deleteHabitConfirmModal,
+#disableCategoriesConfirmModal {
   z-index: 120;
 }
 
 #categoryPickerModal .modal-content,
 #colorPickerModal .modal-content,
-#deleteHabitConfirmModal .modal-content {
+#deleteHabitConfirmModal .modal-content,
+#disableCategoriesConfirmModal .modal-content {
   z-index: 121;
 }
 
@@ -1339,6 +1342,18 @@ body.bad-habit-dragging .bad-habit-row.dragging {
   </div>
 </div>
 
+<div class="modal" id="disableCategoriesConfirmModal">
+  <div class="modal-content">
+    <button type="button" class="modal-close-btn" onclick="closeDisableCategoriesConfirm()">×</button>
+    <h2>Убрать категории?</h2>
+    <div class="confirm-text">Все хорошие привычки отвяжутся от категорий и станут чёрного цвета. Убрать категории?</div>
+    <div class="buttons">
+      <button type="button" class="delete-in-modal" onclick="confirmDisableCategories()">Да</button>
+      <button type="button" onclick="closeDisableCategoriesConfirm()">Нет</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="settingsModal">
   <div class="modal-content">
     <button type="button" class="modal-close-btn" onclick="closeSettingsModal()">×</button>
@@ -1862,8 +1877,36 @@ function closeSettingsModal() {
 }
 
 function setCategoriesSetting(value) {
+  if (value === false && appSettings.useCategories !== false) {
+    showModal("disableCategoriesConfirmModal");
+    updateSettingsUI();
+    return;
+  }
+
   appSettings.useCategories = value;
   save();
+  updateSettingsUI();
+  updateGoodHabitFieldMode();
+  render();
+}
+
+function closeDisableCategoriesConfirm() {
+  hideModal("disableCategoriesConfirmModal");
+  updateSettingsUI();
+}
+
+function confirmDisableCategories() {
+  habits.forEach(habit => {
+    if (isGoodHabit(habit)) {
+      habit.color = "black";
+    }
+  });
+
+  appSettings.useCategories = false;
+  collapsedCategories = {};
+
+  save();
+  hideModal("disableCategoriesConfirmModal");
   updateSettingsUI();
   updateGoodHabitFieldMode();
   render();
@@ -2329,8 +2372,9 @@ function render() {
       let row = `<div class="check-row" data-check-index="${habitIndex}" data-category-id="${habitColorKey}" style="--habit-color:${color}">`;
 
       dates.forEach(date => {
-        const done = habit.done && habit.done[date.key];
-        row += `<div class="cell ${done ? "done" : ""}" onclick="toggleHabit(${habitIndex}, '${date.key}')"></div>`;
+        const state = habit.done && habit.done[date.key];
+        const stateClass = state === "done" || state === true ? "done" : (state === "failed" ? "failed" : "");
+        row += `<div class="cell ${stateClass}" onclick="toggleHabit(${habitIndex}, '${date.key}')"></div>`;
       });
 
       row += `</div>`;
@@ -2382,8 +2426,9 @@ function render() {
       let row = `<div class="check-row" data-check-index="${habitIndex}" data-category-id="${categoryKey}" style="--habit-color:${color}">`;
 
       dates.forEach(date => {
-        const done = habit.done && habit.done[date.key];
-        row += `<div class="cell ${done ? "done" : ""}" onclick="toggleHabit(${habitIndex}, '${date.key}')"></div>`;
+        const state = habit.done && habit.done[date.key];
+        const stateClass = state === "done" || state === true ? "done" : (state === "failed" ? "failed" : "");
+        row += `<div class="cell ${stateClass}" onclick="toggleHabit(${habitIndex}, '${date.key}')"></div>`;
       });
 
       row += `</div>`;
@@ -3261,7 +3306,16 @@ function toggleHabit(habitIndex, dateKey) {
   if (!isGoodHabit(habits[habitIndex])) return;
 
   if (!habits[habitIndex].done) habits[habitIndex].done = {};
-  habits[habitIndex].done[dateKey] = !habits[habitIndex].done[dateKey];
+
+  const currentState = habits[habitIndex].done[dateKey];
+
+  if (currentState === undefined || currentState === false || currentState === null) {
+    habits[habitIndex].done[dateKey] = "done";
+  } else if (currentState === true || currentState === "done") {
+    habits[habitIndex].done[dateKey] = "failed";
+  } else {
+    delete habits[habitIndex].done[dateKey];
+  }
 
   save();
   render();
