@@ -2222,6 +2222,50 @@ function daysSince(dateKey) {
   return Math.max(0, Math.floor(diff / 86400000));
 }
 
+function monthsAndDaysSince(dateKey) {
+  const start = new Date(dateKey + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (start > today) return { months: 0, days: 0 };
+
+  let months = (today.getFullYear() - start.getFullYear()) * 12
+    + (today.getMonth() - start.getMonth());
+
+  function addMonthsClamped(date, count) {
+    const result = new Date(date);
+    const originalDay = result.getDate();
+
+    result.setDate(1);
+    result.setMonth(result.getMonth() + count);
+
+    const lastDay = new Date(
+      result.getFullYear(),
+      result.getMonth() + 1,
+      0
+    ).getDate();
+
+    result.setDate(Math.min(originalDay, lastDay));
+    result.setHours(0, 0, 0, 0);
+    return result;
+  }
+
+  let monthPoint = addMonthsClamped(start, months);
+
+  if (monthPoint > today) {
+    months--;
+    monthPoint = addMonthsClamped(start, months);
+  }
+
+  const days = Math.max(0, Math.floor((today - monthPoint) / 86400000));
+  return { months: Math.max(0, months), days };
+}
+
+function formatRefusalDuration(dateKey) {
+  const duration = monthsAndDaysSince(dateKey);
+  return `${duration.months} мес ${duration.days} дн`;
+}
+
 function violationWord(n) {
   n = Math.abs(Number(n)) || 0;
   if (n % 10 === 1 && n % 100 !== 11) return "раз";
@@ -2442,8 +2486,8 @@ function render() {
 
   badHabits.forEach((habit, badPosition) => {
     const realIndex = habits.indexOf(habit);
-    const count = daysSince(habit.quitDate || todayKey());
-    const refusalText = habit.noCount ? "" : `<div>Вы отказались ${count} ${dayWord(count)} назад</div>`;
+    const refusalDuration = formatRefusalDuration(habit.quitDate || todayKey());
+    const refusalText = habit.noCount ? "" : `<div>Вы отказались ${refusalDuration} назад</div>`;
 
     badList.innerHTML += `
       <div class="bad-habit-row" data-bad-index="${badPosition}">
@@ -3651,8 +3695,7 @@ function updateRefusalInfo() {
   }
 
   const quitDate = document.getElementById("quitDate").value || todayKey();
-  const count = daysSince(quitDate);
-  refusalInfo.textContent = `Вы отказались ${count} ${dayWord(count)} назад`;
+  refusalInfo.textContent = `Вы отказались ${formatRefusalDuration(quitDate)} назад`;
 }
 
 function toggleQuitCalendar() {
