@@ -212,7 +212,26 @@ button {
 }
 
 .cell.done::after { content: "✓"; }
-.cell.failed::after { content: "✕"; font-size: 18px; font-weight: 900; line-height: 1; display:flex; align-items:center; justify-content:center; transform: scale(1.12); }
+.cell.failed{
+  position:relative;
+}
+.cell.failed::before,
+.cell.failed::after{
+  content:"";
+  position:absolute;
+  width:13px;
+  height:2.8px;
+  background:currentColor;
+  border-radius:2px;
+  top:50%;
+  left:50%;
+}
+.cell.failed::before{
+  transform:translate(-50%,-50%) rotate(45deg);
+}
+.cell.failed::after{
+  transform:translate(-50%,-50%) rotate(-45deg);
+}
 
 .bad-section {
   margin-top: 16px;
