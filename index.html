@@ -2222,15 +2222,12 @@ function daysSince(dateKey) {
   return Math.max(0, Math.floor(diff / 86400000));
 }
 
-function monthsAndDaysSince(dateKey) {
+function yearsMonthsAndDaysSince(dateKey) {
   const start = new Date(dateKey + "T00:00:00");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  if (start > today) return { months: 0, days: 0 };
-
-  let months = (today.getFullYear() - start.getFullYear()) * 12
-    + (today.getMonth() - start.getMonth());
+  if (start > today) return { years: 0, months: 0, days: 0, totalDays: 0 };
 
   function addMonthsClamped(date, count) {
     const result = new Date(date);
@@ -2250,20 +2247,41 @@ function monthsAndDaysSince(dateKey) {
     return result;
   }
 
-  let monthPoint = addMonthsClamped(start, months);
+  let totalMonths = (today.getFullYear() - start.getFullYear()) * 12
+    + (today.getMonth() - start.getMonth());
+
+  let monthPoint = addMonthsClamped(start, totalMonths);
 
   if (monthPoint > today) {
-    months--;
-    monthPoint = addMonthsClamped(start, months);
+    totalMonths--;
+    monthPoint = addMonthsClamped(start, totalMonths);
   }
 
+  const years = Math.floor(Math.max(0, totalMonths) / 12);
+  const months = Math.max(0, totalMonths) % 12;
   const days = Math.max(0, Math.floor((today - monthPoint) / 86400000));
-  return { months: Math.max(0, months), days };
+  const totalDays = Math.max(0, Math.floor((today - start) / 86400000));
+
+  return { years, months, days, totalDays };
 }
 
 function formatRefusalDuration(dateKey) {
-  const duration = monthsAndDaysSince(dateKey);
-  return `${duration.months} мес ${duration.days} дн`;
+  const duration = yearsMonthsAndDaysSince(dateKey);
+
+  if (duration.years === 0 && duration.months === 0) {
+    return `${duration.totalDays} ${dayWord(duration.totalDays)}`;
+  }
+
+  const parts = [];
+
+  if (duration.years > 0) {
+    parts.push(`${duration.years} г`);
+  }
+
+  parts.push(`${duration.months} м`);
+  parts.push(`${duration.days} д`);
+
+  return parts.join(" ");
 }
 
 function violationWord(n) {
