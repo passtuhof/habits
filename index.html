@@ -1418,8 +1418,8 @@ body.bad-habit-dragging .bad-habit-row.dragging {
 
     <div class="label">Описание</div>
     <div class="description-wrap">
-      <textarea id="habitDescription" maxlength="1000" placeholder="Описание привычки" oninput="updateDescriptionCounter(); updateHabitSaveButton();"></textarea>
-      <div id="descriptionCounter" class="char-counter">0/1000</div>
+      <textarea id="habitDescription" maxlength="2000" placeholder="Описание привычки" oninput="updateDescriptionCounter(); updateHabitSaveButton();"></textarea>
+      <div id="descriptionCounter" class="char-counter">0/2000</div>
     </div>
 
     <div id="goodFields">
@@ -3678,8 +3678,8 @@ function updateCategoryTitleCounter() {
 
 function updateDescriptionCounter() {
   const textarea = document.getElementById("habitDescription");
-  if (textarea.value.length > 1000) textarea.value = textarea.value.slice(0, 1000);
-  document.getElementById("descriptionCounter").textContent = `${textarea.value.length}/1000`;
+  if (textarea.value.length > 2000) textarea.value = textarea.value.slice(0, 2000);
+  document.getElementById("descriptionCounter").textContent = `${textarea.value.length}/2000`;
   autoResize(textarea);
 }
 
